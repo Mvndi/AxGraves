@@ -91,10 +91,10 @@ public class Grave {
         }
         items.forEach(gui::addItem);
 
-        this.entity = NMSHandlers.getNmsHandler().createEntity(EntityType.ARMOR_STAND, location.clone().add(0, 1 + CONFIG.getFloat("head-height", -1.2f), 0));
-        entity.setItem(EquipmentSlot.HELMET, WrappedItemStack.wrap(Utils.getPlayerHead(offlinePlayer)));
+        entity = NMSHandlers.getNmsHandler().createEntity(EntityType.ARMOR_STAND, location.clone().add(0, 1 + CONFIG.getFloat("head-height", -1.2f), 0));
+//        entity.setItem(EquipmentSlot.HELMET, WrappedItemStack.wrap(Utils.getPlayerHead(offlinePlayer)));
+        entity.setItem(EquipmentSlot.HELMET, WrappedItemStack.wrap(Utils.getGraveItem())); // mvndicraft - use custom gravestone item
         final ArmorStandMeta meta = (ArmorStandMeta) entity.meta();
-        meta.small(true);
         meta.invisible(true);
         meta.setNoBasePlate(false);
         entity.spawn();
