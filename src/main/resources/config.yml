@@ -12,14 +12,20 @@ prefix: '&#FF00FF&lAxGraves &7Â» '
 # in seconds
 despawn-time-seconds: 600
 
-# how long a player stays spectator at their grave before being returned to normal respawn
+# if the player is not within this distance to the town spawn, 
+# they will not be locked to their grave but not the same time : (see below)
+distance-to-town-spawn: 100.0
+
+# how long a player stays in his grave if he is near the town spawn (see above)
 # in seconds
 respawn-lock-seconds: 30
 
-# extra time to keep a player locked to their grave when they rejoin
+# extra time to keep a player locked to their grave when they rejoin 
 # and their main respawn-lock-seconds timer already finished while they were offline
+# or die but far from their town
 # in seconds (set to 0 to disable extra lock on join)
 respawn-rejoin-lock-seconds: 5
+
 
 # which gamemode should the player have after being returned to their normal respawn
 # valid values: SURVIVAL, ADVENTURE, CREATIVE, SPECTATOR
