@@ -140,16 +140,31 @@ public final class GraveLockUtils {
     }
 
     public static void showFalseDeathTitle(Player player) {
-        long remainingMillis = getRemainingLockMillis(player);
-        long remainingSeconds = Math.max(1L, (remainingMillis + 999L) / 1000L);
-        player.showTitle(Title.title(
-                Component.text(
-                        StringUtils.formatToString(LANG.getString("grave-lock.false-death-title", "You just died"))),
-                Component.text(StringUtils.formatToString(
-                        LANG.getString("grave-lock.false-death-subtitle",
-                                "You will stand on your grave for %time% seconds")
-                                .replace("%time%", String.valueOf(remainingSeconds)))),
-                Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(1000), Duration.ofMillis(200))));
+        long totalMillis = getRemainingLockMillis(player);
+        if (totalMillis <= 1000L) {
+            return;
+        }
+        long interval = 1000L;
+        long fadeIn = 0L;
+        long fadeOut = 0L;
+        long stay = Math.max(interval, getMoveLockMillis() / 4);
+        int updates = (int) Math.ceil(totalMillis / (double) interval);
+        for (int i = 0; i < updates; i++) {
+            long delayTicks = Math.max(1, (i * interval) / 50); // Folia: delay ticks must be >= 1
+            Bukkit.getRegionScheduler().runDelayed(AxGraves.getInstance(), player.getLocation(), (ignored) -> {
+                long remainingMillis = getRemainingLockMillis(player);
+                long remainingSeconds = Math.max(1L, (remainingMillis + 999L) / 1000L);
+                player.showTitle(Title.title(
+                        Component.text(StringUtils
+                                .formatToString(LANG.getString("grave-lock.false-death-title", "You just died"))),
+                        Component.text(StringUtils.formatToString(
+                                LANG.getString("grave-lock.false-death-subtitle",
+                                        "You will stand on your grave for %time% seconds")
+                                        .replace("%time%", String.valueOf(remainingSeconds)))),
+                        Title.Times.times(Duration.ofMillis(fadeIn), Duration.ofMillis(stay),
+                                Duration.ofMillis(fadeOut))));
+            }, delayTicks);
+        }
     }
 
     public static void onPlayerJoin(Player player) {
@@ -245,10 +260,12 @@ public final class GraveLockUtils {
 
                 if (storedValue == REJOIN_PENDING_SENTINEL) {
                     Player player = getOnlinePlayer(uuid);
+
                     if (player == null || !player.isOnline()) {
                         continue;
                     }
 
+                    showFalseDeathTitle(player);
                     long rejoinMillis = getMoveLockRejoinMillis();
                     if (rejoinMillis <= 0L) {
                         realDeath(player);
