@@ -3,7 +3,7 @@
  */
 
 group = "com.artillexstudios"
-version = "1.26.2"
+version = "1.26.3"
 description = "AxGraves"
 java.sourceCompatibility = JavaVersion.VERSION_21
 var mainMinecraftVersion = "1.21.11"
@@ -11,7 +11,7 @@ val supportedMinecraftVersions = "1.20 - 1.21.11"
 
 plugins {
     `java-library`
-    `maven-publish`
+    id("com.gradleup.shadow") version "8.3.8"
     id("xyz.jpenilla.run-paper") version "2.3.1"
 }
 
@@ -42,18 +42,14 @@ repositories {
 }
 
 dependencies {
-    api("com.artillexstudios.axapi:axapi:1.4.840:all")
-    api(libs.org.bstats.bstats.bukkit)
+    implementation("com.artillexstudios.axapi:axapi:1.4.840:all")
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
+    implementation(libs.org.bstats.bstats.bukkit)
     compileOnly("io.papermc.paper:paper-api:$mainMinecraftVersion-R0.1-SNAPSHOT")
     compileOnly(libs.org.slf4j.slf4j.api)
-}
-
-
-
-publishing {
-    publications.create<MavenPublication>("maven") {
-        from(components["java"])
-    }
+    // compileOnly("com.github.TownyAdvanced:2.19.3") {
+    //     exclude(group = "org.bukkit", module = "bukkit")
+    // }
 }
 
 tasks.withType<JavaCompile>() {
@@ -62,6 +58,32 @@ tasks.withType<JavaCompile>() {
 
 tasks.withType<Javadoc>() {
     options.encoding = "UTF-8"
+}
+
+tasks.processResources {
+    filteringCharset = "UTF-8"
+    filesMatching("plugin.yml") {
+        filter {
+            it.replace("\${project.version}", project.version.toString())
+        }
+    }
+}
+
+tasks.jar {
+    archiveClassifier.set("plain")
+}
+
+tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
+    archiveClassifier.set("")
+    relocate("com.github.benmanes.caffeine", "com.artillexstudios.axgraves.libs.axapi.libs.caffeine.caffeine")
+    relocate("com.artillexstudios.axapi", "com.artillexstudios.axgraves.libs.axapi")
+    relocate("org.bstats", "com.artillexstudios.axgraves.libs.bstats")
+    relocate("revxrsal.commands", "com.artillexstudios.axgraves.libs.lamp")
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+}
+
+tasks.matching { it.name == "runServer" || it.name == "runFolia" }.configureEach {
+    dependsOn(tasks.named("shadowJar"))
 }
 
 tasks {
