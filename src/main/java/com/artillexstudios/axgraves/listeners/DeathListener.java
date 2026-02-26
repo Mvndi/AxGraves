@@ -87,7 +87,8 @@ public class DeathListener implements Listener {
         }
 
         event.setCancelled(true);
-        player.setGameMode(GameMode.SPECTATOR);
+        // Hide and protect player instead of spectator mode
+        GraveLockUtils.applyGraveLockState(player);
         GraveLockUtils.showFalseDeathTitle(player);
 
         if (killer != null) {
@@ -116,8 +117,9 @@ public class DeathListener implements Listener {
         }
 
         Location location = player.getLocation();
-        Boolean isSwiming = Math.floor(player.getEyeLocation().getY() - player.getLocation().getY()) < 1.1;
-
+        Boolean isSwiming = Math.floor(player.getEyeLocation().getY() - player.getLocation().getY()) < 0.5;
+        LogUtils.debug("isSwiming ", player.isSwimming(), player.getEyeLocation().getY(),
+                player.getLocation().getY());
         location.setY(findSafeY(location));
         Location playerLocation = location.clone();
         playerLocation.setX(Math.floor(playerLocation.getX()) + 0.5);
@@ -129,11 +131,9 @@ public class DeathListener implements Listener {
             LogUtils.debug("block au dessus");
         }
 
-        // playerLocation.setY(playerLocation.getY() - 1);
-
         if (isSwiming) {
             LogUtils.debug("joueur bas");
-            // playerLocation.setY(playerLocation.getY() + 1);
+            playerLocation.setY(playerLocation.getY() + 1);
         }
 
         Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), playerLocation, () -> {
