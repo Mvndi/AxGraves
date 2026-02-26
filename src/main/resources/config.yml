@@ -1,5 +1,12 @@
 prefix: "<gradient:#FF00FF:#DD00FF><b>AxGraves</b></gradient> &7» "
 
+safe-blocks:
+  - "AIR"
+  - "CAVE_AIR"
+  - "VOID_AIR"
+  - "WATER"
+  - "LAVA"
+
 # how fast should the graves disappear
 # set to -1 to make graves last until the next server restart
 # in seconds
@@ -171,3 +178,4 @@ debug: false
 
 # do not edit
 version: 19
+
