@@ -22,6 +22,11 @@ reload:
 interact:
   not-your-grave: '&#FF3333You can only open your own grave!'
 
+grave-lock:
+  action-denied: '&#FF3333Action denied: &f%action%&#FF3333. Time remaining: &f%time%s&#FF3333.'
+  false-death-title: 'You just died'
+  false-death-subtitle: 'You will stand on your grave for %time% seconds'
+
 death-message:
   enabled: false
   message: '&#FFAAAAYou have died at &f%world% %x%, %y%, %z%&#FFAAAA!'
