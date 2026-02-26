@@ -3,6 +3,8 @@ package com.artillexstudios.axgraves.utils;
 import com.artillexstudios.axapi.scheduler.Scheduler;
 import com.artillexstudios.axapi.utils.logging.LogUtils;
 import com.artillexstudios.axgraves.AxGraves;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -11,6 +13,7 @@ import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -71,6 +74,42 @@ public final class GraveLockUtils {
         }
     }
 
+    public static long getRemainingLockMillis(Player player) {
+        synchronized (LOCK) {
+            FileConfiguration gravedPlayers = loadStorage();
+            String playerUuid = player.getUniqueId().toString();
+            long now = System.currentTimeMillis();
+
+            if (!gravedPlayers.contains(playerUuid)) {
+                return 0L;
+            }
+
+            long storedValue = gravedPlayers.getLong(playerUuid, 0L);
+            if (storedValue == 0L) {
+                return 0L;
+            }
+
+            if (storedValue == REJOIN_PENDING_SENTINEL) {
+                return getMoveLockRejoinMillis();
+            }
+
+            if (storedValue < 0L) {
+                return Math.max(0L, (-storedValue) - now);
+            }
+
+            long remaining = getMoveLockMillis() - (now - storedValue);
+            return Math.max(0L, remaining);
+        }
+    }
+
+    public static void showFalseDeathTitle(Player player) {
+        long remainingSeconds = Math.max(1L, getRemainingLockMillis(player) / 1000L);
+        player.showTitle(Title.title(
+                Component.text("You just died"),
+                Component.text("You will stand on your grave for " + remainingSeconds + " seconds"),
+                Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(1000), Duration.ofMillis(200))));
+    }
+
     public static void onPlayerJoin(Player player) {
         synchronized (LOCK) {
             FileConfiguration gravedPlayers = loadStorage();
@@ -79,6 +118,8 @@ public final class GraveLockUtils {
             if (!gravedPlayers.contains(playerUuid)) {
                 return;
             }
+
+            showFalseDeathTitle(player);
 
             long storedValue = gravedPlayers.getLong(playerUuid, 0L);
             if (storedValue == REJOIN_PENDING_SENTINEL) {

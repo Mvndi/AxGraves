@@ -7,6 +7,8 @@ import com.artillexstudios.axgraves.api.events.GraveSpawnEvent;
 import com.artillexstudios.axgraves.grave.Grave;
 import com.artillexstudios.axgraves.grave.SpawnedGraves;
 import com.artillexstudios.axgraves.utils.ExperienceUtils;
+import com.artillexstudios.axgraves.utils.GraveLockUtils;
+
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -83,6 +85,7 @@ public class DeathListener implements Listener {
         if (!isRealDeath(player, debug)) {
             event.setCancelled(true);
             player.setGameMode(GameMode.SPECTATOR);
+            GraveLockUtils.showFalseDeathTitle(player);
             return;
         }
 
