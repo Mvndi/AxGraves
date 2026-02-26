@@ -1,9 +1,6 @@
 package com.artillexstudios.axgraves.listeners;
 
-import com.artillexstudios.axgraves.AxGraves;
 import com.artillexstudios.axgraves.utils.GraveLockUtils;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -15,13 +12,13 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class GraveLockListener implements Listener {
-    private static final long DEFAULT_MOVE_LOCK_SECONDS = 30L;
+    private static final long ACTION_MESSAGE_COOLDOWN_MS = 1_000L;
+    private final Map<UUID, Long> lastActionMessage = new ConcurrentHashMap<>();
 
     private final JavaPlugin plugin;
 
@@ -36,7 +33,7 @@ public class GraveLockListener implements Listener {
             return;
 
         event.setCancelled(true);
-        player.sendMessage("You are temporarily locked to your grave and cannot use commands.");
+        sendDeniedActionMessage(player, "command");
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -46,6 +43,7 @@ public class GraveLockListener implements Listener {
             return;
 
         event.setCancelled(true);
+        sendDeniedActionMessage(player, "interaction");
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -57,6 +55,7 @@ public class GraveLockListener implements Listener {
             return;
 
         event.setCancelled(true);
+        sendDeniedActionMessage(player, "inventory-click");
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -70,6 +69,7 @@ public class GraveLockListener implements Listener {
 
         if (from.getX() != to.getX() || from.getY() != to.getY() || from.getZ() != to.getZ()) {
             event.setCancelled(true);
+            sendDeniedActionMessage(player, "movement");
         }
     }
 
@@ -80,11 +80,20 @@ public class GraveLockListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
+        lastActionMessage.remove(event.getPlayer().getUniqueId());
         GraveLockUtils.onPlayerJoin(event.getPlayer());
     }
 
-    private long getMoveLockMillis() {
-        long seconds = AxGraves.CONFIG.getLong("respawn-lock-seconds", DEFAULT_MOVE_LOCK_SECONDS);
-        return Math.max(0L, seconds) * 1000L;
+    private void sendDeniedActionMessage(Player player, String action) {
+        long now = System.currentTimeMillis();
+        long lastMessage = lastActionMessage.getOrDefault(player.getUniqueId(), 0L);
+        if (now - lastMessage < ACTION_MESSAGE_COOLDOWN_MS) {
+            return;
+        }
+
+        lastActionMessage.put(player.getUniqueId(), now);
+        long remainingMillis = GraveLockUtils.getRemainingLockMillis(player);
+        long remainingSeconds = Math.max(1L, (remainingMillis + 999L) / 1000L);
+        player.sendMessage("Action denied: " + action + ". Time remaining: " + remainingSeconds + "s.");
     }
 }
