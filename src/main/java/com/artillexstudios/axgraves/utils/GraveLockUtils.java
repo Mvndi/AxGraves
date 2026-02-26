@@ -102,8 +102,9 @@ public final class GraveLockUtils {
                 return true;
             }
 
-            if (now - storedValue < getMoveLockMillis()) {
+            if (now - storedValue < getRespawnLockSeconds(player)) {
                 return true;
+
             }
 
             realDeath(player);
@@ -134,7 +135,8 @@ public final class GraveLockUtils {
                 return Math.max(0L, (-storedValue) - now);
             }
 
-            long remaining = getMoveLockMillis() - (now - storedValue);
+            long remaining = getRespawnLockSeconds(player) - (now - storedValue);
+
             return Math.max(0L, remaining);
         }
     }
@@ -147,7 +149,7 @@ public final class GraveLockUtils {
         long interval = 1000L;
         long fadeIn = 0L;
         long fadeOut = 0L;
-        long stay = Math.max(interval, getMoveLockMillis() / 4);
+        long stay = interval + 500L;
         int updates = (int) Math.ceil(totalMillis / (double) interval);
         for (int i = 0; i < updates; i++) {
             long delayTicks = Math.max(1, (i * interval) / 50); // Folia: delay ticks must be >= 1
@@ -247,7 +249,6 @@ public final class GraveLockUtils {
         synchronized (LOCK) {
             FileConfiguration gravedPlayers = loadStorage();
             long now = System.currentTimeMillis();
-            long lockMillis = getMoveLockMillis();
             boolean changed = false;
 
             for (String uuid : gravedPlayers.getKeys(false)) {
@@ -283,8 +284,8 @@ public final class GraveLockUtils {
                     if (now < rejoinUnlockAt) {
                         continue;
                     }
-
                     Player player = getOnlinePlayer(uuid);
+
                     if (player == null || !player.isOnline()) {
                         continue;
                     }
@@ -292,12 +293,16 @@ public final class GraveLockUtils {
                     realDeath(player);
                     continue;
                 }
+                Player player = getOnlinePlayer(uuid);
 
-                if (now - storedValue < lockMillis) {
+                if (player == null || !player.isOnline()) {
                     continue;
                 }
 
-                Player player = getOnlinePlayer(uuid);
+                if (now - storedValue < getRespawnLockSeconds(player)) {
+                    continue;
+                }
+
                 if (player == null || !player.isOnline()) {
                     gravedPlayers.set(uuid, REJOIN_PENDING_SENTINEL);
                     changed = true;
@@ -363,13 +368,33 @@ public final class GraveLockUtils {
         }
     }
 
+    private static long getRespawnLockSeconds(Player player) {
+        if (isNearIsTownSpawn(player)) {
+            return getMoveLockMillis();
+        } else {
+            return getMoveLockRejoinMillis();
+        }
+    }
+
     private static long getMoveLockMillis() {
         long seconds = AxGraves.CONFIG.getLong("respawn-lock-seconds", DEFAULT_MOVE_LOCK_SECONDS);
+
         return Math.max(0L, seconds) * 1000L;
     }
 
     private static long getMoveLockRejoinMillis() {
         long seconds = AxGraves.CONFIG.getLong("respawn-rejoin-lock-seconds", DEFAULT_MOVE_LOCK_SECONDS);
         return Math.max(0L, seconds) * 1000L;
+    }
+
+    private static boolean isNearIsTownSpawn(Player player) {
+        if (Bukkit.getServer().getPluginManager().getPlugin("Towny") == null
+                || !Bukkit.getServer().getPluginManager().isPluginEnabled("Towny")) {
+            LogUtils.info("Towny plugin not found or not enabled.");
+            return false;
+        }
+
+        double distanceValue = AxGraves.CONFIG.getLong("distance-to-town-spawn", 1000L);
+        return TownyUtils.getDistanceToSpawn(player, player.getLocation()) < distanceValue;
     }
 }

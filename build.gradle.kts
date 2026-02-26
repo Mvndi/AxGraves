@@ -9,36 +9,38 @@ java.sourceCompatibility = JavaVersion.VERSION_21
 var mainMinecraftVersion = "1.21.11"
 val supportedMinecraftVersions = "1.20 - 1.21.11"
 
+
+// val mvndiRemote = repositories.maven("https://repo.mvndicraft.net/repository/maven-snapshots/") {
+//     name = "Mvndi"
+//     credentials {
+//         username = project.findProperty("mvndi.user") as String? ?: System.getenv("MVNDI_MVN_USER")
+//         password = project.findProperty("mvndi.key") as String? ?: System.getenv("MVNDI_MVN_KEY")
+//     }
+// }
+
 plugins {
     `java-library`
     id("com.gradleup.shadow") version "8.3.8"
     id("xyz.jpenilla.run-paper") version "2.3.1"
 }
 
+
 repositories {
-    mavenLocal()
-    maven {
-        url = uri("https://repo.papermc.io/repository/maven-public/")
-    }
     maven {
         url = uri("https://repo.artillex-studios.com/releases/")
-    }
-
-    maven {
-        url = uri("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
     }
 
     maven {
         url = uri("https://oss.sonatype.org/content/groups/public/")
     }
 
-    maven {
-        url = uri("https://jitpack.io")
-    }
-
-    maven {
-        url = uri("https://repo.maven.apache.org/maven2/")
-    }
+    // mvndiRemote
+    mavenCentral()
+    maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://jitpack.io")
+    maven("https://repo.aikar.co/content/groups/aikar/")
+    maven("https://repo.glaremasters.me/repository/towny/")
+    
 }
 
 dependencies {
@@ -47,7 +49,10 @@ dependencies {
     implementation(libs.org.bstats.bstats.bukkit)
     compileOnly("io.papermc.paper:paper-api:$mainMinecraftVersion-R0.1-SNAPSHOT")
     compileOnly(libs.org.slf4j.slf4j.api)
-    // compileOnly("com.github.TownyAdvanced:2.19.3") {
+    compileOnly("com.github.TownyAdvanced:Towny:0.102.0.0") {
+        exclude(group = "org.bukkit", module = "bukkit")
+    }
+    // compileOnly("com.github.TownyAdvanced:SiegeWar:2.19.3") {
     //     exclude(group = "org.bukkit", module = "bukkit")
     // }
 }
@@ -87,6 +92,9 @@ tasks.matching { it.name == "runServer" || it.name == "runFolia" }.configureEach
 }
 
 tasks {
+    assemble {
+        dependsOn(shadowJar)
+    }
     runServer {
         minecraftVersion("$mainMinecraftVersion")
     }
