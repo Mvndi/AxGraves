@@ -22,10 +22,7 @@ public class GraveLockListener implements Listener {
     private static final long ACTION_MESSAGE_COOLDOWN_MS = 1_000L;
     private final Map<UUID, Long> lastActionMessage = new ConcurrentHashMap<>();
 
-    private final JavaPlugin plugin;
-
     public GraveLockListener(JavaPlugin plugin) {
-        this.plugin = plugin;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
