@@ -65,44 +65,54 @@ public class DeathListener implements Listener {
                 eventPriority,
                 executor,
                 AxGraves.getInstance(),
-                true
-        );
+                true);
     }
 
     public void onDeath(PlayerDeathEvent event) {
         boolean debug = AxGraves.isDebugMode();
         Player player = event.getEntity();
 
-        if (debug) LogUtils.debug("[{}] spawning grave", player.getName());
+        if (debug)
+            LogUtils.debug("[{}] spawning grave", player.getName());
         if (disabledWorlds.contains(player.getWorld().getName())) {
-            if (debug) LogUtils.debug("[{}] return: disabled world {}", player.getName(), player.getWorld().getName());
+            if (debug)
+                LogUtils.debug("[{}] return: disabled world {}", player.getName(), player.getWorld().getName());
             return;
         }
 
         if (!player.hasPermission("axgraves.allowgraves")) {
-            if (debug) LogUtils.debug("[{}] return: missing permission axgraves.allowgraves", player.getName());
+            if (debug)
+                LogUtils.debug("[{}] return: missing permission axgraves.allowgraves", player.getName());
             return;
         }
 
-        if (player.getLastDamageCause() != null && blacklistedDeathCauses.contains(player.getLastDamageCause().getCause().name())) {
-            if (debug) LogUtils.debug("[{}] return: blacklisted death cause {}", player.getName(), player.getLastDamageCause().getCause().name());
+        if (player.getLastDamageCause() != null
+                && blacklistedDeathCauses.contains(player.getLastDamageCause().getCause().name())) {
+            if (debug)
+                LogUtils.debug("[{}] return: blacklisted death cause {}", player.getName(),
+                        player.getLastDamageCause().getCause().name());
             return;
         }
 
         Location location = player.getLocation();
         location.add(0, -0.5, 0);
-        if (debug) LogUtils.debug("[{}] location moved to {}", player.getName(), location.toString());
+        location.setY(findSafeY(location));
+        if (debug)
+            LogUtils.debug("[{}] location moved to {}", player.getName(), location.toString());
 
         final GravePreSpawnEvent gravePreSpawnEvent = new GravePreSpawnEvent(player, location);
         Bukkit.getPluginManager().callEvent(gravePreSpawnEvent);
         if (gravePreSpawnEvent.isCancelled()) {
-            if (debug) LogUtils.debug("[{}] return: GravePreSpawnEvent cancelled", player.getName());
+            if (debug)
+                LogUtils.debug("[{}] return: GravePreSpawnEvent cancelled", player.getName());
             return;
         }
 
         if (debug) {
-            LogUtils.debug("[{}] storeItems: {} - getKeepInventory: {} - overrideKeepInventory: {}", player.getName(), storeItems, event.getKeepInventory(), overrideKeepInventory);
-            LogUtils.debug("[{}] storeXP: {} - getKeepLevel: {} - overrideKeepLevel: {}", player.getName(), storeXP, event.getKeepLevel(), overrideKeepLevel);
+            LogUtils.debug("[{}] storeItems: {} - getKeepInventory: {} - overrideKeepInventory: {}", player.getName(),
+                    storeItems, event.getKeepInventory(), overrideKeepInventory);
+            LogUtils.debug("[{}] storeXP: {} - getKeepLevel: {} - overrideKeepLevel: {}", player.getName(), storeXP,
+                    event.getKeepLevel(), overrideKeepLevel);
         }
 
         List<ItemStack> drops = new ArrayList<>();
@@ -121,7 +131,8 @@ public class DeathListener implements Listener {
             if (store) {
                 event.getDrops().clear();
             }
-            if (debug) LogUtils.debug("[{}] store: {} - drops size: {}", player.getName(), store, drops.size());
+            if (debug)
+                LogUtils.debug("[{}] store: {} - drops size: {}", player.getName(), store, drops.size());
         }
 
         int xp = 0;
@@ -139,18 +150,51 @@ public class DeathListener implements Listener {
                 xp = Math.round(ExperienceUtils.getExp(player) * xpKeepPercentage);
                 event.setDroppedExp(0);
             }
-            if (debug) LogUtils.debug("[{}] store: {} - xp: {}", player.getName(), store, xp);
+            if (debug)
+                LogUtils.debug("[{}] store: {} - xp: {}", player.getName(), store, xp);
         }
 
         if (drops.isEmpty() && xp == 0) {
-            if (debug) LogUtils.debug("[{}] return: drops empty and xp is 0", player.getName());
+            if (debug)
+                LogUtils.debug("[{}] return: drops empty and xp is 0", player.getName());
             return;
         }
         Grave grave = new Grave(location, player, drops, xp, System.currentTimeMillis());
         SpawnedGraves.addGrave(grave);
-        if (debug) LogUtils.debug("[{}] created and added grave", player.getName());
+        if (debug)
+            LogUtils.debug("[{}] created and added grave", player.getName());
 
         final GraveSpawnEvent graveSpawnEvent = new GraveSpawnEvent(player, grave);
         Bukkit.getPluginManager().callEvent(graveSpawnEvent);
+    }
+
+    private double findSafeY(Location location) {
+        double y = location.getY();
+        int maxAttempts = 256;
+        List<String> safeBlocks = CONFIG.getStringList("safe-blocks");
+        boolean startInBlock = !location.getWorld().getBlockAt((int) location.getX(), (int) y, (int) location.getZ())
+                .isPassable();
+
+        if (startInBlock) {
+            while (y < 320 && maxAttempts-- > 0) {
+                String blockType = location.getWorld().getBlockAt((int) location.getX(), (int) y, (int) location.getZ())
+                        .getType().name();
+                if (safeBlocks.contains(blockType)) {
+                    return y;
+                }
+                y++;
+            }
+        } else {
+            while (y > 0 && maxAttempts-- > 0) {
+                String blockType = location.getWorld().getBlockAt((int) location.getX(), (int) y, (int) location.getZ())
+                        .getType().name();
+                if (safeBlocks.contains(blockType)) {
+                    return y;
+                }
+                y--;
+            }
+        }
+
+        return location.getY();
     }
 }
