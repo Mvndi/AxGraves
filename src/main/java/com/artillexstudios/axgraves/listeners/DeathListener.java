@@ -82,12 +82,13 @@ public class DeathListener implements Listener {
         Player player = event.getEntity();
         Player killer = player.getKiller();
 
-        if (!isRealDeath(player, debug)) {
-            event.setCancelled(true);
-            player.setGameMode(GameMode.SPECTATOR);
-            GraveLockUtils.showFalseDeathTitle(player);
+        if (isRealDeath(player, debug)) {
             return;
         }
+
+        event.setCancelled(true);
+        player.setGameMode(GameMode.SPECTATOR);
+        GraveLockUtils.showFalseDeathTitle(player);
 
         if (killer != null) {
             killer.sendMessage("you just killed " + player.getName());
@@ -115,8 +116,30 @@ public class DeathListener implements Listener {
         }
 
         Location location = player.getLocation();
+        Boolean isSwiming = Math.floor(player.getEyeLocation().getY() - player.getLocation().getY()) < 1.1;
 
         location.setY(findSafeY(location));
+        Location playerLocation = location.clone();
+        playerLocation.setX(Math.floor(playerLocation.getX()) + 0.5);
+        playerLocation.setZ(Math.floor(playerLocation.getZ()) + 0.5);
+
+        if (!CONFIG.getStringList("safe-blocks")
+                .contains(playerLocation.clone().add(0, 1, 0).getBlock().getType().name())) {
+            playerLocation.setY(playerLocation.getY() - 1);
+            LogUtils.debug("block au dessus");
+        }
+
+        // playerLocation.setY(playerLocation.getY() - 1);
+
+        if (isSwiming) {
+            LogUtils.debug("joueur bas");
+            // playerLocation.setY(playerLocation.getY() + 1);
+        }
+
+        Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), playerLocation, () -> {
+            player.teleportAsync(playerLocation);
+        });
+        location.setY(location.clone().getY() - 1); // place the armor stand head in the block
 
         if (debug)
             LogUtils.debug("[{}] location moved to {}", player.getName(), location.toString());
@@ -151,6 +174,8 @@ public class DeathListener implements Listener {
 
             if (store) {
                 event.getDrops().clear();
+                player.getInventory().clear();
+
             }
             if (debug)
                 LogUtils.debug("[{}] store: {} - drops size: {}", player.getName(), store, drops.size());
@@ -170,6 +195,8 @@ public class DeathListener implements Listener {
             if (store) {
                 xp = Math.round(ExperienceUtils.getExp(player) * xpKeepPercentage);
                 event.setDroppedExp(0);
+                player.setLevel(0);
+
             }
             if (debug)
                 LogUtils.debug("[{}] store: {} - xp: {}", player.getName(), store, xp);
@@ -187,6 +214,7 @@ public class DeathListener implements Listener {
 
         final GraveSpawnEvent graveSpawnEvent = new GraveSpawnEvent(player, grave);
         Bukkit.getPluginManager().callEvent(graveSpawnEvent);
+
     }
 
     private boolean isRealDeath(Player player, boolean debug) {
@@ -220,32 +248,42 @@ public class DeathListener implements Listener {
     }
 
     private double findSafeY(Location location) {
+        if (location.getWorld() == null) {
+            return location.getY();
+        }
+
         double y = location.getY();
         int maxAttempts = 256;
         List<String> safeBlocks = CONFIG.getStringList("safe-blocks");
-        boolean startInBlock = !location.getWorld().getBlockAt((int) location.getX(), (int) y, (int) location.getZ())
-                .isPassable();
+        int blockX = (int) Math.floor(location.getX());
+        int blockZ = (int) Math.floor(location.getZ());
+        int minHeight = location.getWorld().getMinHeight();
+        int maxHeight = location.getWorld().getMaxHeight() - 1;
+
+        boolean startInBlock = !location.getWorld().getBlockAt(blockX, (int) Math.floor(y), blockZ).isPassable();
 
         if (startInBlock) {
-            while (y < 320 && maxAttempts-- > 0) {
-                String blockType = location.getWorld().getBlockAt((int) location.getX(), (int) y, (int) location.getZ())
+            while (y < maxHeight && maxAttempts-- > 0) {
+                String blockType = location.getWorld().getBlockAt(blockX, (int) Math.floor(y), blockZ)
                         .getType().name();
                 if (safeBlocks.contains(blockType)) {
-                    return y;
+                    return Math.floor(y);
                 }
                 y++;
             }
         } else {
-            while (y > 0 && maxAttempts-- > 0) {
-                String blockType = location.getWorld().getBlockAt((int) location.getX(), (int) y, (int) location.getZ())
+            while (y > minHeight && maxAttempts-- > 0) {
+                String blockType = location.getWorld().getBlockAt(blockX, (int) Math.floor(y), blockZ)
                         .getType().name();
-                if (safeBlocks.contains(blockType)) {
-                    return y;
+                if (!safeBlocks.contains(blockType)) {
+                    return Math.floor(y + 1);
                 }
                 y--;
             }
+
+            return Math.floor(Math.max(minHeight, y));
         }
 
-        return location.getY();
+        return Math.floor(location.getY());
     }
 }
