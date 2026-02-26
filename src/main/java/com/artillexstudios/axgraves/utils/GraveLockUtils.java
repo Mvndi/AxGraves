@@ -1,6 +1,7 @@
 package com.artillexstudios.axgraves.utils;
 
 import com.artillexstudios.axapi.scheduler.Scheduler;
+import com.artillexstudios.axapi.utils.StringUtils;
 import com.artillexstudios.axapi.utils.logging.LogUtils;
 import com.artillexstudios.axgraves.AxGraves;
 import net.kyori.adventure.text.Component;
@@ -21,6 +22,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static com.artillexstudios.axgraves.AxGraves.EXECUTOR;
+import static com.artillexstudios.axgraves.AxGraves.LANG;
 
 public final class GraveLockUtils {
 
@@ -103,10 +105,15 @@ public final class GraveLockUtils {
     }
 
     public static void showFalseDeathTitle(Player player) {
-        long remainingSeconds = Math.max(1L, getRemainingLockMillis(player) / 1000L);
+        long remainingMillis = getRemainingLockMillis(player);
+        long remainingSeconds = Math.max(1L, (remainingMillis + 999L) / 1000L);
         player.showTitle(Title.title(
-                Component.text("You just died"),
-                Component.text("You will stand on your grave for " + remainingSeconds + " seconds"),
+                Component.text(
+                        StringUtils.formatToString(LANG.getString("grave-lock.false-death-title", "You just died"))),
+                Component.text(StringUtils.formatToString(
+                        LANG.getString("grave-lock.false-death-subtitle",
+                                "You will stand on your grave for %time% seconds")
+                                .replace("%time%", String.valueOf(remainingSeconds)))),
                 Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(1000), Duration.ofMillis(200))));
     }
 
