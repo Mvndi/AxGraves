@@ -26,6 +26,41 @@ import static com.artillexstudios.axgraves.AxGraves.LANG;
 
 public final class GraveLockUtils {
 
+    // Track vanished/invisible players
+    private static final Set<UUID> vanishedPlayers = ConcurrentHashMap.newKeySet();
+
+    public static void applyGraveLockState(Player player) {
+        // Hide from all other players (Folia safe)
+        for (Player other : Bukkit.getOnlinePlayers()) {
+            if (!other.equals(player)) {
+                Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), other.getLocation(), () -> {
+                    other.hidePlayer(AxGraves.getInstance(), player);
+                });
+            }
+        }
+        Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), player.getLocation(), () -> {
+            player.setInvulnerable(true);
+            player.setInvisible(true);
+            vanishedPlayers.add(player.getUniqueId());
+        });
+    }
+
+    public static void removeGraveLockState(Player player) {
+        // Show to all other players (Folia safe)
+        for (Player other : Bukkit.getOnlinePlayers()) {
+            if (!other.equals(player)) {
+                Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), other.getLocation(), () -> {
+                    other.showPlayer(AxGraves.getInstance(), player);
+                });
+            }
+        }
+        Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), player.getLocation(), () -> {
+            player.setInvulnerable(false);
+            player.setInvisible(false);
+            vanishedPlayers.remove(player.getUniqueId());
+        });
+    }
+
     private static final String RESPAWN_STORAGE_FILE = "graved-players.yml";
     private static final long DEFAULT_MOVE_LOCK_SECONDS = 30L;
     private static final long REJOIN_PENDING_SENTINEL = -1L;
@@ -127,6 +162,7 @@ public final class GraveLockUtils {
             }
 
             showFalseDeathTitle(player);
+            applyGraveLockState(player);
 
             long storedValue = gravedPlayers.getLong(playerUuid, 0L);
             if (storedValue == REJOIN_PENDING_SENTINEL) {
@@ -278,12 +314,12 @@ public final class GraveLockUtils {
             if (!player.isOnline() || player.isDead()) {
                 return;
             }
-
+            removeGraveLockState(player);
             pendingRespawnGamemode.add(player.getUniqueId());
             player.setGameMode(getReturnGamemode());
-
             player.setHealth(0.0D);
         });
+        removeGraveLockState(player);
     }
 
     private static GameMode getReturnGamemode() {
