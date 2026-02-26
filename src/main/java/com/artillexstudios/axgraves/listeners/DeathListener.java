@@ -8,6 +8,7 @@ import com.artillexstudios.axgraves.grave.Grave;
 import com.artillexstudios.axgraves.grave.SpawnedGraves;
 import com.artillexstudios.axgraves.utils.ExperienceUtils;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
@@ -16,9 +17,15 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.EventExecutor;
 
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static com.artillexstudios.axgraves.AxGraves.CONFIG;
 
@@ -71,9 +78,19 @@ public class DeathListener implements Listener {
     public void onDeath(PlayerDeathEvent event) {
         boolean debug = AxGraves.isDebugMode();
         Player player = event.getEntity();
+        Player killer = player.getKiller();
 
-        if (debug)
-            LogUtils.debug("[{}] spawning grave", player.getName());
+        if (!isRealDeath(player, debug)) {
+            event.setCancelled(true);
+            player.setGameMode(GameMode.SPECTATOR);
+            return;
+        }
+
+        if (killer != null) {
+            killer.sendMessage("you just killed " + player.getName());
+        }
+
+        LogUtils.debug("[{}] spawning grave", player.getName());
         if (disabledWorlds.contains(player.getWorld().getName())) {
             if (debug)
                 LogUtils.debug("[{}] return: disabled world {}", player.getName(), player.getWorld().getName());
@@ -95,8 +112,9 @@ public class DeathListener implements Listener {
         }
 
         Location location = player.getLocation();
-        location.add(0, -0.5, 0);
+
         location.setY(findSafeY(location));
+
         if (debug)
             LogUtils.debug("[{}] location moved to {}", player.getName(), location.toString());
 
@@ -166,6 +184,36 @@ public class DeathListener implements Listener {
 
         final GraveSpawnEvent graveSpawnEvent = new GraveSpawnEvent(player, grave);
         Bukkit.getPluginManager().callEvent(graveSpawnEvent);
+    }
+
+    private boolean isRealDeath(Player player, boolean debug) {
+        File graveFile = new File(AxGraves.getInstance().getDataFolder(), "graved-players.yml");
+        FileConfiguration gravedPlayers = YamlConfiguration.loadConfiguration(graveFile);
+
+        String playerUuid = player.getUniqueId().toString();
+        long currentTime = System.currentTimeMillis();
+
+        if (!gravedPlayers.contains(playerUuid)) {
+            gravedPlayers.set(playerUuid, currentTime);
+            try {
+                gravedPlayers.save(graveFile);
+            } catch (IOException e) {
+                LogUtils.error("Failed to save graved-players.yml", e);
+            }
+            return false;
+        } else {
+            gravedPlayers.set(playerUuid, null);
+            try {
+                gravedPlayers.save(graveFile);
+            } catch (IOException e) {
+                LogUtils.error("Failed to save graved-players.yml", e);
+            }
+            if (debug) {
+                long deathTime = gravedPlayers.getLong(playerUuid);
+                LogUtils.debug("[{}] death recorded at: {}", player.getName(), new java.util.Date(deathTime));
+            }
+            return true;
+        }
     }
 
     private double findSafeY(Location location) {

@@ -1,5 +1,3 @@
-prefix: "<gradient:#FF00FF:#DD00FF><b>AxGraves</b></gradient> &7» "
-
 safe-blocks:
   - "AIR"
   - "CAVE_AIR"
@@ -7,12 +5,28 @@ safe-blocks:
   - "WATER"
   - "LAVA"
 
-# how fast should the graves disappear
+
+prefix: '&#FF00FF&lAxGraves &7Â» '
+
+# how fast should death chests disappear
 # set to -1 to make graves last until the next server restart
 # in seconds
-despawn-time-seconds: 180
+despawn-time-seconds: 600
 
-# should graves drop all items on the ground when they expire?
+# how long a player stays spectator at their grave before being returned to normal respawn
+# in seconds
+respawn-lock-seconds: 30
+
+# extra time to keep a player locked to their grave when they rejoin
+# and their main respawn-lock-seconds timer already finished while they were offline
+# in seconds (set to 0 to disable extra lock on join)
+respawn-rejoin-lock-seconds: 5
+
+# which gamemode should the player have after being returned to their normal respawn
+# valid values: SURVIVAL, ADVENTURE, CREATIVE, SPECTATOR
+respawn-return-gamemode: SURVIVAL
+
+# should death chests drop all items on the ground when they expire?
 # if false: items will be removed
 drop-items: true
 
@@ -20,32 +34,31 @@ drop-items: true
 dropped-item-velocity: true
 
 # should players have the ability to take all items from a death chest by shift right clicking?
-enable-instant-pickup: true
+enable-instant-pickup: false
 
 # only works if enable-instant-pickup is true
-# this makes it that only the owner of the grave will be able to instantly pick it up
+# this makes it that only the owner of the death chest will be able to instant pickup it
 instant-pickup-only-own: false
 
-# if you enable this, items will be taken away and stored in the grave on death, even if third party plugin tries to keep them
-# enabling this will also make the keep-inventory gamerule ineffective
-override-keep-inventory: false
+# i would only recommend disabling this if you have a permission based keepinventory system
+override-keep-inventory: true
 
 # if you enable this, xp levels will be taken away and stored in the grave on death, even if third party plugin tries to keep them
 override-keep-level: false
 
-# how high should grave holograms spawn?
+# how high should death chest holograms spawn?
 # only applies to new graves
-hologram-height: 0.5
+hologram-height: 0.75
 
 # how high should the player head be?
 # in some versions on some clients may see the heads glitched in the ground
 # use this option OR viaversion's hologram-y setting to correct it
 # only applies to new graves
-head-height: -1.2
+head-height: -1.89
 
 # true: the head can face in all the 360 degrees
 # false: the head can face in only 4 directions (north, east, south, west)
-rotate-head-360: true
+rotate-head-360: false
 
 # should the head rotate
 auto-rotation:
@@ -66,23 +79,22 @@ store-items: true
 
 # should the plugin store XP in graves?
 # if disabled, XP will be dropped on the ground
-store-xp: true
+store-xp: false
 
 # what order should items be put in the grave?
 # all the other items will be put AFTER these
 # values: ARMOR, HAND, OFFHAND
 grave-item-order:
-  - "ARMOR"
-  - "HAND"
-  - "OFFHAND"
+- ARMOR
+- HAND
+- OFFHAND
 
 # should the armor parts be auto equipped?
 auto-equip-armor: true
 
-# how many graves can a single player have at the same time?
+# how many limits can a single player have at one time?
 # if the limit is reached, the first grave will be removed
 # set to -1 to disable
-# you can override this by giving players the axgraves.limit.<amount> permissions
 grave-limit: -1
 
 # should the grave disappear when all items get taken out of it?
@@ -99,7 +111,7 @@ save-graves:
 # with this setting you can override it
 custom-grave-skull:
   enabled: false
-  base64: ""
+  base64: ''
 
 # you can add any amount of worlds
 # if you don't define a world, the plugin will use the default world limits of the dimension
@@ -117,35 +129,35 @@ spawn-height-limits:
 # you must define at least 1
 # requires a restart to update
 command-aliases:
-  - "axgraves"
-  - "axgrave"
-  - "graves"
-  - "grave"
+- axgraves
+- axgrave
+- graves
+- grave
 
 # used for the %world% placeholder
 # if a world isn't defined here, it will default to the original name of the world
 # note: world names are case-sensitive
 world-name:
-  world: "Overworld"
-  world_nether: "The Nether"
-  world_the_end: "The End"
+  world: Overworld
+  world_nether: The Nether
+  world_the_end: The End
 
-# worlds where graves won't spawn
+# worlds where death chests won't spawn
 # this is case-sensitive
 disabled-worlds:
-  - "blacklisted_world"
+- blacklisted_world
 
 # if players die from any of the following, no graves will be spawned
 # list of valid values: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/event/entity/EntityDamageEvent.DamageCause.html
 # case sensitive
 blacklisted-death-causes:
-  - "EXAMPLE_DEATH_CAUSE"
+- EXAMPLE_DEATH_CAUSE
 
 # items that will be removed on death and will not show up in graves
 blacklisted-items:
-  "1":
-    material: "barrier"
-    name-contains: "Banned item's name"
+  '1':
+    material: barrier
+    name-contains: Banned item's name
 
 # what event priority should the plugin use? if everything is working, no need to touch this
 # however if the plugin is spawning graves without items, you can try setting this to lower values (lower = runs earlier)
@@ -174,8 +186,7 @@ update-notifier:
 
 # prints out a lot of information about the plugin in the console
 # this can cause a lot of spam, only use if a developer asks you to
-debug: false
+debug: true
 
 # do not edit
-version: 19
-
+version: '19'

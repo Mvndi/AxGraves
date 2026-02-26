@@ -16,8 +16,10 @@ import com.artillexstudios.axgraves.grave.GravePlaceholders;
 import com.artillexstudios.axgraves.grave.SpawnedGraves;
 import com.artillexstudios.axgraves.listeners.DeathListener;
 import com.artillexstudios.axgraves.listeners.PlayerInteractListener;
+import com.artillexstudios.axgraves.listeners.GraveLockListener;
 import com.artillexstudios.axgraves.schedulers.SaveGraves;
 import com.artillexstudios.axgraves.schedulers.TickGraves;
+import com.artillexstudios.axgraves.utils.GraveLockUtils;
 import com.artillexstudios.axgraves.utils.UpdateNotifier;
 import org.bstats.bukkit.Metrics;
 
@@ -51,14 +53,21 @@ public final class AxGraves extends AxPlugin {
 
         new Metrics(this, 20332);
 
-        CONFIG = new Config(new File(getDataFolder(), "config.yml"), getResource("config.yml"), GeneralSettings.builder().setUseDefaults(false).build(), LoaderSettings.builder().setAutoUpdate(true).build(), DumperSettings.DEFAULT, UpdaterSettings.builder().setVersioning(new BasicVersioning("version")).build());
-        LANG = new Config(new File(getDataFolder(), "messages.yml"), getResource("messages.yml"), GeneralSettings.builder().setUseDefaults(false).build(), LoaderSettings.builder().setAutoUpdate(true).build(), DumperSettings.DEFAULT, UpdaterSettings.builder().setVersioning(new BasicVersioning("version")).build());
+        CONFIG = new Config(new File(getDataFolder(), "config.yml"), getResource("config.yml"),
+                GeneralSettings.builder().setUseDefaults(false).build(),
+                LoaderSettings.builder().setAutoUpdate(true).build(), DumperSettings.DEFAULT,
+                UpdaterSettings.builder().setVersioning(new BasicVersioning("version")).build());
+        LANG = new Config(new File(getDataFolder(), "messages.yml"), getResource("messages.yml"),
+                GeneralSettings.builder().setUseDefaults(false).build(),
+                LoaderSettings.builder().setAutoUpdate(true).build(), DumperSettings.DEFAULT,
+                UpdaterSettings.builder().setVersioning(new BasicVersioning("version")).build());
 
         debugMode = CONFIG.getBoolean("debug", false);
         MESSAGEUTILS = new MessageUtils(LANG.getBackingDocument(), "prefix", CONFIG.getBackingDocument());
 
         new DeathListener();
         getServer().getPluginManager().registerEvents(new PlayerInteractListener(), this);
+        getServer().getPluginManager().registerEvents(new GraveLockListener(this), this);
 
         CommandManager.load();
         GravePlaceholders.register();
@@ -69,23 +78,30 @@ public final class AxGraves extends AxPlugin {
 
         TickGraves.start();
         SaveGraves.start();
+        GraveLockUtils.startLockExpiryChecker();
 
         metrics = new AxMetrics(this, 20);
         metrics.start();
 
-        if (CONFIG.getBoolean("update-notifier.enabled", true)) new UpdateNotifier(this, 5076);
+        if (CONFIG.getBoolean("update-notifier.enabled", true))
+            new UpdateNotifier(this, 5076);
     }
 
     public void disable() {
-        if (metrics != null) metrics.cancel();
+        if (metrics != null)
+            metrics.cancel();
 
         TickGraves.stop();
         SaveGraves.stop();
+        GraveLockUtils.stopLockExpiryChecker();
 
         for (Grave grave : SpawnedGraves.getGraves()) {
-            if (!CONFIG.getBoolean("save-graves.enabled", true)) grave.remove();
-            if (grave.getEntity() != null) grave.getEntity().remove();
-            if (grave.getHologram() != null) grave.getHologram().remove();
+            if (!CONFIG.getBoolean("save-graves.enabled", true))
+                grave.remove();
+            if (grave.getEntity() != null)
+                grave.getEntity().remove();
+            if (grave.getHologram() != null)
+                grave.getHologram().remove();
         }
 
         if (CONFIG.getBoolean("save-graves.enabled", true)) {
