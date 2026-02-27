@@ -10,13 +10,13 @@ var mainMinecraftVersion = "1.21.11"
 val supportedMinecraftVersions = "1.20 - 1.21.11"
 
 
-// val mvndiRemote = repositories.maven("https://repo.mvndicraft.net/repository/maven-snapshots/") {
-//     name = "Mvndi"
-//     credentials {
-//         username = project.findProperty("mvndi.user") as String? ?: System.getenv("MVNDI_MVN_USER")
-//         password = project.findProperty("mvndi.key") as String? ?: System.getenv("MVNDI_MVN_KEY")
-//     }
-// }
+val mvndiRemote = repositories.maven("https://repo.mvndicraft.net/repository/maven-snapshots/") {
+    name = "Mvndi"
+    credentials {
+        username = project.findProperty("mvndi.user") as String? ?: System.getenv("MVNDI_MVN_USER")
+        password = project.findProperty("mvndi.key") as String? ?: System.getenv("MVNDI_MVN_KEY")
+    }
+}
 
 plugins {
     `java-library`
@@ -34,7 +34,7 @@ repositories {
         url = uri("https://oss.sonatype.org/content/groups/public/")
     }
 
-    // mvndiRemote
+    mvndiRemote
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://jitpack.io")
@@ -52,9 +52,9 @@ dependencies {
     compileOnly("com.github.TownyAdvanced:Towny:0.102.0.0") {
         exclude(group = "org.bukkit", module = "bukkit")
     }
-    // compileOnly("com.github.TownyAdvanced:SiegeWar:2.19.3") {
-    //     exclude(group = "org.bukkit", module = "bukkit")
-    // }
+    compileOnly("com.github.TownyAdvanced:SiegeWar:2.19.3") {
+        exclude(group = "org.bukkit", module = "bukkit")
+    }
 }
 
 tasks.withType<JavaCompile>() {
