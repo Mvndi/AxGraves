@@ -10,6 +10,9 @@ import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.entity.Entity;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Map;
@@ -19,6 +22,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.artillexstudios.axgraves.AxGraves.MESSAGEUTILS;
 
 public class GraveLockListener implements Listener {
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        // Si l'attaquant est un joueur et qu'il est en GraveLock, on annule l'attaque
+        Entity damager = event.getDamager();
+        if (damager instanceof Player player) {
+            if (GraveLockUtils.isLocked(player)) {
+                event.setCancelled(true);
+                sendDeniedActionMessage(player, "attack");
+            }
+        }
+    }
+
     private static final long ACTION_MESSAGE_COOLDOWN_MS = 1_000L;
     private final Map<UUID, Long> lastActionMessage = new ConcurrentHashMap<>();
 
@@ -103,6 +118,11 @@ public class GraveLockListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         lastActionMessage.remove(event.getPlayer().getUniqueId());
         GraveLockUtils.onPlayerJoin(event.getPlayer());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        GraveLockUtils.onPlayerQuit(event.getPlayer());
     }
 
     private void sendDeniedActionMessage(Player player, String action) {
