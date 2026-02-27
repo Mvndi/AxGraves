@@ -85,7 +85,9 @@ public class DeathListener implements Listener {
 
         boolean stayOnGrave = true;
 
-        if (isSiegeActive(player) && GraveLockUtils.getMoveSiegeLockMillis() <= 0) {
+        if (killer == null || !(killer instanceof Player)) {
+            stayOnGrave = false;
+        } else if (isSiegeActive(player) && GraveLockUtils.getMoveSiegeLockMillis() <= 0) {
             stayOnGrave = false;
         } else if (isNearIsTownSpawn(player) && GraveLockUtils.getMoveTownLockMillis() <= 0) {
             stayOnGrave = false;
