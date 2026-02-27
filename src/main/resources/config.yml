@@ -29,6 +29,12 @@ town-respawn-lock-seconds: 30
 # if <= 0, there will be no grave time lock during sieges, even if the player is near a town spawn
 siege-respawn-lock-seconds: 45
 
+grave-lock-sounds:
+  last: block.lever.click # when the player respawn
+  interval: block.lever.click # every 5s
+  tick: block.lever.click # every other seconds
+
+
 # should death chests drop all items on the ground when they expire?
 # if false: items will be removed
 drop-items: true

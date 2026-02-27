@@ -141,10 +141,10 @@ public class DeathListener implements Listener {
             if (!CONFIG.getStringList("safe-blocks")
                     .contains(playerLocation.clone().add(0, 1, 0).getBlock().getType().name())) {
                 playerLocation.setY(playerLocation.getY() - 1);
-                LogUtils.debug("block au dessus");
+                LogUtils.debug("player has a block above");
             }
             if (isSwiming) {
-                LogUtils.debug("joueur bas");
+                LogUtils.debug("player is low (swimming)");
                 playerLocation.setY(playerLocation.getY() + 1);
             }
 
