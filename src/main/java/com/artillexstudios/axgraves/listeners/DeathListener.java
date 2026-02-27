@@ -124,25 +124,21 @@ public class DeathListener implements Listener {
             }
         }
 
-        if (debug)
-            LogUtils.debug("[{}] spawning grave", player.getName());
+        LogUtils.debug("[{}] spawning grave", player.getName());
         if (disabledWorlds.contains(player.getWorld().getName())) {
-            if (debug)
-                LogUtils.debug("[{}] return: disabled world {}", player.getName(), player.getWorld().getName());
+            LogUtils.debug("[{}] return: disabled world {}", player.getName(), player.getWorld().getName());
             return;
         }
 
         if (!player.hasPermission("axgraves.allowgraves")) {
-            if (debug)
-                LogUtils.debug("[{}] return: missing permission axgraves.allowgraves", player.getName());
+            LogUtils.debug("[{}] return: missing permission axgraves.allowgraves", player.getName());
             return;
         }
 
         if (player.getLastDamageCause() != null
                 && blacklistedDeathCauses.contains(player.getLastDamageCause().getCause().name())) {
-            if (debug)
-                LogUtils.debug("[{}] return: blacklisted death cause {}", player.getName(),
-                        player.getLastDamageCause().getCause().name());
+            LogUtils.debug("[{}] return: blacklisted death cause {}", player.getName(),
+                    player.getLastDamageCause().getCause().name());
             return;
         }
 
@@ -160,12 +156,10 @@ public class DeathListener implements Listener {
             if (!CONFIG.getStringList("safe-blocks")
                     .contains(playerLocation.clone().add(0, 1, 0).getBlock().getType().name())) {
                 playerLocation.setY(playerLocation.getY() - 1);
-                if (debug)
-                    LogUtils.debug("player has a block above");
+                LogUtils.debug("player has a block above");
             }
             if (isSwiming) {
-                if (debug)
-                    LogUtils.debug("player is low (swimming)");
+                LogUtils.debug("player is low (swimming)");
                 playerLocation.setY(playerLocation.getY() + 1);
             }
 
@@ -176,23 +170,19 @@ public class DeathListener implements Listener {
 
         location.setY(location.clone().getY() - 1); // place the armor stand head in the block
 
-        if (debug)
-            LogUtils.debug("[{}] location moved to {}", player.getName(), location.toString());
+        LogUtils.debug("[{}] location moved to {}", player.getName(), location.toString());
 
         final GravePreSpawnEvent gravePreSpawnEvent = new GravePreSpawnEvent(player, location);
         Bukkit.getPluginManager().callEvent(gravePreSpawnEvent);
         if (gravePreSpawnEvent.isCancelled()) {
-            if (debug)
-                LogUtils.debug("[{}] return: GravePreSpawnEvent cancelled", player.getName());
+            LogUtils.debug("[{}] return: GravePreSpawnEvent cancelled", player.getName());
             return;
         }
 
-        if (debug) {
-            LogUtils.debug("[{}] storeItems: {} - getKeepInventory: {} - overrideKeepInventory: {}", player.getName(),
-                    storeItems, event.getKeepInventory(), overrideKeepInventory);
-            LogUtils.debug("[{}] storeXP: {} - getKeepLevel: {} - overrideKeepLevel: {}", player.getName(), storeXP,
-                    event.getKeepLevel(), overrideKeepLevel);
-        }
+        LogUtils.debug("[{}] storeItems: {} - getKeepInventory: {} - overrideKeepInventory: {}", player.getName(),
+                storeItems, event.getKeepInventory(), overrideKeepInventory);
+        LogUtils.debug("[{}] storeXP: {} - getKeepLevel: {} - overrideKeepLevel: {}", player.getName(), storeXP,
+                event.getKeepLevel(), overrideKeepLevel);
 
         List<ItemStack> drops = new ArrayList<>();
         if (storeItems) {
@@ -214,8 +204,7 @@ public class DeathListener implements Listener {
                 }
 
             }
-            if (debug)
-                LogUtils.debug("[{}] store: {} - drops size: {}", player.getName(), store, drops.size());
+            LogUtils.debug("[{}] store: {} - drops size: {}", player.getName(), store, drops.size());
         }
 
         int xp = 0;
@@ -237,19 +226,16 @@ public class DeathListener implements Listener {
                 }
 
             }
-            if (debug)
-                LogUtils.debug("[{}] store: {} - xp: {}", player.getName(), store, xp);
+            LogUtils.debug("[{}] store: {} - xp: {}", player.getName(), store, xp);
         }
 
         if (drops.isEmpty() && xp == 0) {
-            if (debug)
-                LogUtils.debug("[{}] return: drops empty and xp is 0", player.getName());
+            LogUtils.debug("[{}] return: drops empty and xp is 0", player.getName());
             return;
         }
         Grave grave = new Grave(location, player, drops, xp, System.currentTimeMillis());
         SpawnedGraves.addGrave(grave);
-        if (debug)
-            LogUtils.debug("[{}] created and added grave", player.getName());
+        LogUtils.debug("[{}] created and added grave", player.getName());
 
         final GraveSpawnEvent graveSpawnEvent = new GraveSpawnEvent(player, grave);
         Bukkit.getPluginManager().callEvent(graveSpawnEvent);
@@ -278,10 +264,8 @@ public class DeathListener implements Listener {
             } catch (IOException e) {
                 LogUtils.error("Failed to save graved-players.yml", e);
             }
-            if (debug) {
-                long deathTime = gravedPlayers.getLong(playerUuid);
-                LogUtils.debug("[{}] death recorded at: {}", player.getName(), new java.util.Date(deathTime));
-            }
+            long deathTime = gravedPlayers.getLong(playerUuid);
+            LogUtils.debug("[{}] death recorded at: {}", player.getName(), new java.util.Date(deathTime));
             return true;
         }
     }
