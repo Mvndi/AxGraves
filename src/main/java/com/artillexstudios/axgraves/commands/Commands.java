@@ -48,7 +48,7 @@ public class Commands implements OrphanCommand {
         sender.sendMessage(org.bukkit.ChatColor.GREEN + "Grave lock removed for " + target.getName());
     }
 
-    @Subcommand("unlock")
+    @Subcommand("unlockAll")
     @CommandPermission("axgraves.unlock")
     public void unlockAll(@NotNull CommandSender sender) {
         int count = 0;
