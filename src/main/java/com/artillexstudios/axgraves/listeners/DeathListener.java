@@ -11,7 +11,6 @@ import com.artillexstudios.axgraves.utils.GraveLockUtils;
 import com.artillexstudios.axgraves.utils.TownyUtils;
 
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
@@ -28,7 +27,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import static com.artillexstudios.axgraves.AxGraves.CONFIG;
 
@@ -130,7 +128,8 @@ public class DeathListener implements Listener {
             }
         }
 
-        LogUtils.debug("[{}] spawning grave", player.getName());
+        if (debug)
+            LogUtils.debug("[{}] spawning grave", player.getName());
         if (disabledWorlds.contains(player.getWorld().getName())) {
             if (debug)
                 LogUtils.debug("[{}] return: disabled world {}", player.getName(), player.getWorld().getName());
@@ -165,10 +164,12 @@ public class DeathListener implements Listener {
             if (!CONFIG.getStringList("safe-blocks")
                     .contains(playerLocation.clone().add(0, 1, 0).getBlock().getType().name())) {
                 playerLocation.setY(playerLocation.getY() - 1);
-                LogUtils.debug("player has a block above");
+                if (debug)
+                    LogUtils.debug("player has a block above");
             }
             if (isSwiming) {
-                LogUtils.debug("player is low (swimming)");
+                if (debug)
+                    LogUtils.debug("player is low (swimming)");
                 playerLocation.setY(playerLocation.getY() + 1);
             }
 

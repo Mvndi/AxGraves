@@ -49,6 +49,14 @@ public final class GraveLockUtils {
     }
 
     public static void removeGraveLockState(Player player) {
+        synchronized (LOCK) {
+            FileConfiguration gravedPlayers = loadStorage();
+            FileConfiguration gravedLogoutPlayers = loadLogoutStorage();
+
+            String playerUuid = player.getUniqueId().toString();
+            gravedPlayers.set(playerUuid, null);
+            gravedLogoutPlayers.set(playerUuid, null);
+        }
         for (Player other : Bukkit.getOnlinePlayers()) {
             if (!other.equals(player)) {
                 Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), other.getLocation(), () -> {
@@ -206,6 +214,13 @@ public final class GraveLockUtils {
             FileConfiguration gravedLogoutPlayers = loadLogoutStorage();
 
             String playerUuid = player.getUniqueId().toString();
+
+            if (getRemainingLockMillis(player) - System.currentTimeMillis() <= 0) {
+                gravedPlayers.set(playerUuid, null);
+                gravedLogoutPlayers.set(playerUuid, null);
+                removeGraveLockState(player);
+                return;
+            }
 
             if (!gravedLogoutPlayers.contains(playerUuid)) {
                 return;
