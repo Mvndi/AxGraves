@@ -196,7 +196,7 @@ update-notifier:
 
 # prints out a lot of information about the plugin in the console
 # this can cause a lot of spam, only use if a developer asks you to
-debug: true
+debug: false
 
 # do not edit
 version: '19'
