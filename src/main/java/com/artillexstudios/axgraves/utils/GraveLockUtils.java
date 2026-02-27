@@ -8,6 +8,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -157,9 +158,22 @@ public final class GraveLockUtils {
         long fadeOut = 0L;
         long stay = interval + 500L;
         int updates = (int) Math.ceil(totalMillis / (double) interval);
-
         for (int i = 0; i < updates; i++) {
-            long delayTicks = Math.max(1, (i * interval) / 50); // Folia: delay ticks must be >= 1
+            final int index = i;
+            long delayTicks = Math.max(1, (index * interval) / 50); // Folia: delay ticks must be >= 1
+            String sound;
+
+            String lastSoundName = AxGraves.CONFIG.getString("grave-lock-sounds.last", "block.lever.click");
+            String intervalSoundName = AxGraves.CONFIG.getString("grave-lock-sounds.interval", "block.lever.click");
+            String tickSoundName = AxGraves.CONFIG.getString("grave-lock-sounds.tick", "block.lever.click");
+
+            if (index == updates - 1) {
+                sound = lastSoundName;
+            } else if (index % 5 == 0) {
+                sound = intervalSoundName;
+            } else {
+                sound = tickSoundName;
+            }
             Bukkit.getRegionScheduler().runDelayed(AxGraves.getInstance(), player.getLocation(), (ignored) -> {
                 long remainingMillis = getRemainingLockMillis(player);
                 long remainingSeconds = Math.max(1L, (remainingMillis + 999L) / 1000L);
@@ -174,18 +188,16 @@ public final class GraveLockUtils {
                         Title.Times.times(Duration.ofMillis(fadeIn), Duration.ofMillis(stay),
                                 Duration.ofMillis(fadeOut))));
                 // Send chat message as well
-                String chatMessage = StringUtils.formatToString(
-                        LANG.getString("grave-lock.false-death-chat",
-                                "You must wait %time% seconds before respawning.")
-                                .replace("%time%", String.valueOf(remainingSeconds)));
-                if (isSiegeActive(player)) {
-                    chatMessage += " You are in a siege! (so it's longer)";
-                } else if (isNearIsTownSpawn(player)) {
-                    chatMessage += " You are near a town spawn! (so it's longer)";
+                if (index == 0) {
+
+                    String chatMessage = StringUtils.formatToString(
+                            LANG.getString("grave-lock.false-death-chat",
+                                    "You must wait %time% seconds before respawning.")
+                                    .replace("%time%", String.valueOf(remainingSeconds)));
+
+                    player.sendMessage(Component.text(chatMessage));
                 }
-                player.sendMessage(Component.text(chatMessage));
-                player.playNote(player.getLocation(), org.bukkit.Instrument.PIANO,
-                        org.bukkit.Note.natural(1, org.bukkit.Note.Tone.C)); // Instrument.PIANO, note C
+                player.getWorld().playSound(player, sound, 1.0f, 1.0f);
             }, delayTicks);
         }
     }
@@ -414,7 +426,7 @@ public final class GraveLockUtils {
     }
 
     public static long getMoveNormalLockMillis() {
-        long seconds = AxGraves.CONFIG.getLong("town-respawn-lock-seconds", DEFAULT_MOVE_LOCK_SECONDS);
+        long seconds = AxGraves.CONFIG.getLong("normal-respawn-lock-seconds", DEFAULT_MOVE_LOCK_SECONDS);
 
         return Math.max(0L, seconds) * 1000L;
     }
@@ -426,7 +438,7 @@ public final class GraveLockUtils {
     }
 
     public static long getMoveTownLockMillis() {
-        long seconds = AxGraves.CONFIG.getLong("normal-respawn-lock-seconds", DEFAULT_MOVE_LOCK_SECONDS);
+        long seconds = AxGraves.CONFIG.getLong("town-respawn-lock-seconds", DEFAULT_MOVE_LOCK_SECONDS);
         return Math.max(0L, seconds) * 1000L;
     }
 
