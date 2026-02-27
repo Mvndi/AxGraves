@@ -405,7 +405,6 @@ public final class GraveLockUtils {
             return false;
         }
 
-        double distanceValue = AxGraves.CONFIG.getLong("distance-to-town-spawn", 1000L);
-        return TownyUtils.getDistanceToSpawn(player, player.getLocation()) < distanceValue;
+        return TownyUtils.isNearTownSpawn(player);
     }
 }
