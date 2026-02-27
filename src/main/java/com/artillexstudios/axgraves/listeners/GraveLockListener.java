@@ -104,7 +104,7 @@ public class GraveLockListener implements Listener {
         org.bukkit.Location to = event.getTo();
 
         if (from.getX() != to.getX() || from.getY() != to.getY() || from.getZ() != to.getZ()) {
-            event.setCancelled(true);
+            event.setTo(from.clone().setDirection(to.getDirection())); // Garde la direction (tête), bloque la position
             sendDeniedActionMessage(player, "movement");
         }
     }
