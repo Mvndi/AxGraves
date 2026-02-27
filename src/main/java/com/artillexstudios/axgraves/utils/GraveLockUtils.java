@@ -31,6 +31,7 @@ public final class GraveLockUtils {
     private static final Set<UUID> vanishedPlayers = ConcurrentHashMap.newKeySet();
 
     public static void applyGraveLockState(Player player) {
+        System.out.println("HELLO????");
         // Hide from all other players (Folia safe)
         for (Player other : Bukkit.getOnlinePlayers()) {
             if (!other.equals(player)) {
@@ -206,6 +207,13 @@ public final class GraveLockUtils {
             FileConfiguration gravedLogoutPlayers = loadLogoutStorage();
 
             String playerUuid = player.getUniqueId().toString();
+
+            if (getRemainingLockMillis(player) - System.currentTimeMillis() <= 0) {
+                gravedPlayers.set(playerUuid, null);
+                gravedLogoutPlayers.set(playerUuid, null);
+                removeGraveLockState(player);
+                return;
+            }
 
             if (!gravedLogoutPlayers.contains(playerUuid)) {
                 return;
