@@ -41,6 +41,8 @@ public final class GraveLockUtils {
         Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), player.getLocation(), () -> {
             player.setInvulnerable(true);
             player.setInvisible(true);
+            player.setAllowFlight(true);
+            player.setFlying(true);
             vanishedPlayers.add(player.getUniqueId());
         });
     }
@@ -57,11 +59,15 @@ public final class GraveLockUtils {
         Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), player.getLocation(), () -> {
             player.setInvulnerable(false);
             player.setInvisible(false);
+            player.setAllowFlight(false);
+            player.setFlying(false);
             vanishedPlayers.remove(player.getUniqueId());
         });
     }
 
     private static final String RESPAWN_STORAGE_FILE = "graved-players.yml";
+    private static final String LOGOUT_STORAGE_FILE = "logged-out-players.yml";
+
     private static final long DEFAULT_MOVE_LOCK_SECONDS = 30L;
     private static final long REJOIN_PENDING_SENTINEL = -1L;
     private static final Object LOCK = new Object();
@@ -183,39 +189,40 @@ public final class GraveLockUtils {
     public static void onPlayerJoin(Player player) {
         synchronized (LOCK) {
             FileConfiguration gravedPlayers = loadStorage();
+            FileConfiguration gravedLogoutPlayers = loadLogoutStorage();
+
+            String playerUuid = player.getUniqueId().toString();
+
+            if (!gravedLogoutPlayers.contains(playerUuid)) {
+                return;
+            }
+
+            gravedPlayers.set(playerUuid, System.currentTimeMillis());
+            saveStorage(gravedPlayers);
+
+            applyGraveLockState(player);
+            showFalseDeathTitle(player);
+
+        }
+    }
+
+    public static void onPlayerQuit(Player player) {
+        LogUtils.info("Player {} is logging out, checking for grave lock", player.getName());
+        synchronized (LOCK) {
+            FileConfiguration gravedPlayers = loadStorage();
             String playerUuid = player.getUniqueId().toString();
 
             if (!gravedPlayers.contains(playerUuid)) {
+                LogUtils.info("Player {} does not have an active grave lock, no action needed", player.getName());
                 return;
             }
 
-            showFalseDeathTitle(player);
-            applyGraveLockState(player);
+            FileConfiguration logoutPlayers = loadLogoutStorage();
+            logoutPlayers.set(playerUuid, System.currentTimeMillis());
+            saveLogoutStorage(logoutPlayers);
 
-            long storedValue = gravedPlayers.getLong(playerUuid, 0L);
-            if (storedValue == REJOIN_PENDING_SENTINEL) {
-                long rejoinMillis = getMoveLockRejoinMillis();
-                if (rejoinMillis <= 0L) {
-                    realDeath(player);
-                    return;
-                }
-
-                long rejoinUnlockAt = System.currentTimeMillis() + rejoinMillis;
-                gravedPlayers.set(playerUuid, -rejoinUnlockAt);
-                saveStorage(gravedPlayers);
-                return;
-            }
-
-            if (storedValue >= 0L) {
-                return;
-            }
-
-            long rejoinUnlockAt = -storedValue;
-            if (System.currentTimeMillis() < rejoinUnlockAt) {
-                return;
-            }
-
-            realDeath(player);
+            player.setHealth(0.0D);
+            LogUtils.info("Player {} logged out while locked, applying death", player.getName());
         }
     }
 
@@ -350,7 +357,18 @@ public final class GraveLockUtils {
             removeGraveLockState(player);
             pendingRespawnGamemode.add(player.getUniqueId());
             player.setGameMode(getReturnGamemode());
-            player.setHealth(0.0D);
+
+            UUID uuid = player.getUniqueId();
+            FileConfiguration gravedLogoutPlayers = loadLogoutStorage();
+            if (!gravedLogoutPlayers.contains(uuid.toString())) {
+                player.setHealth(0.0D);
+            } else {
+                FileConfiguration gravedPlayers = loadStorage();
+                gravedPlayers.set(uuid.toString(), null);
+                gravedLogoutPlayers.set(uuid.toString(), null);
+                saveStorage(gravedPlayers);
+                saveLogoutStorage(gravedLogoutPlayers);
+            }
         });
         removeGraveLockState(player);
     }
@@ -368,6 +386,20 @@ public final class GraveLockUtils {
     private static FileConfiguration loadStorage() {
         return YamlConfiguration.loadConfiguration(
                 new File(AxGraves.getInstance().getDataFolder(), RESPAWN_STORAGE_FILE));
+    }
+
+    private static FileConfiguration loadLogoutStorage() {
+        return YamlConfiguration.loadConfiguration(
+                new File(AxGraves.getInstance().getDataFolder(), LOGOUT_STORAGE_FILE));
+    }
+
+    private static void saveLogoutStorage(FileConfiguration config) {
+        File file = new File(AxGraves.getInstance().getDataFolder(), LOGOUT_STORAGE_FILE);
+        try {
+            config.save(file);
+        } catch (IOException exception) {
+            LogUtils.error("Failed to save {}", LOGOUT_STORAGE_FILE, exception);
+        }
     }
 
     private static void saveStorage(FileConfiguration config) {
