@@ -154,11 +154,6 @@ public class GraveLockListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
-    public void onRespawn(PlayerRespawnEvent event) {
-        GraveLockUtils.applyPendingRespawnGamemode(event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
         lastActionMessage.remove(event.getPlayer().getUniqueId());
         GraveLockUtils.onPlayerJoin(event.getPlayer());
