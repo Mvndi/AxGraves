@@ -8,6 +8,7 @@ import com.artillexstudios.axgraves.grave.Grave;
 import com.artillexstudios.axgraves.grave.SpawnedGraves;
 import com.artillexstudios.axgraves.utils.ExperienceUtils;
 import com.artillexstudios.axgraves.utils.GraveLockUtils;
+import com.artillexstudios.axgraves.utils.TownyUtils;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -82,17 +83,19 @@ public class DeathListener implements Listener {
         Player player = event.getEntity();
         Player killer = player.getKiller();
 
-        if (isRealDeath(player, debug)) {
-            return;
-        }
+        boolean stayOnGrave = !isSiegeActive(player);
 
-        event.setCancelled(true);
-        // Hide and protect player instead of spectator mode
-        GraveLockUtils.applyGraveLockState(player);
-        GraveLockUtils.showFalseDeathTitle(player);
-
-        if (killer != null) {
-            killer.sendMessage("you just killed " + player.getName());
+        if (stayOnGrave) {
+            if (isRealDeath(player, debug)) {
+                return;
+            }
+            event.setCancelled(true);
+            // Hide and protect player instead of spectator mode
+            GraveLockUtils.applyGraveLockState(player);
+            GraveLockUtils.showFalseDeathTitle(player);
+            if (killer != null) {
+                killer.sendMessage("you just killed " + player.getName());
+            }
         }
 
         LogUtils.debug("[{}] spawning grave", player.getName());
@@ -117,28 +120,31 @@ public class DeathListener implements Listener {
         }
 
         Location location = player.getLocation();
-        Boolean isSwiming = Math.floor(player.getEyeLocation().getY() - player.getLocation().getY()) < 0.5;
-        LogUtils.debug("isSwiming ", player.isSwimming(), player.getEyeLocation().getY(),
-                player.getLocation().getY());
         location.setY(findSafeY(location));
-        Location playerLocation = location.clone();
-        playerLocation.setX(Math.floor(playerLocation.getX()) + 0.5);
-        playerLocation.setZ(Math.floor(playerLocation.getZ()) + 0.5);
 
-        if (!CONFIG.getStringList("safe-blocks")
-                .contains(playerLocation.clone().add(0, 1, 0).getBlock().getType().name())) {
-            playerLocation.setY(playerLocation.getY() - 1);
-            LogUtils.debug("block au dessus");
+        if (stayOnGrave) {
+
+            Boolean isSwiming = Math.floor(player.getEyeLocation().getY() - player.getLocation().getY()) < 0.5;
+            LogUtils.debug("isSwiming ", player.isSwimming(), player.getEyeLocation().getY(),
+                    player.getLocation().getY());
+            Location playerLocation = location.clone();
+            playerLocation.setX(Math.floor(playerLocation.getX()) + 0.5);
+            playerLocation.setZ(Math.floor(playerLocation.getZ()) + 0.5);
+            if (!CONFIG.getStringList("safe-blocks")
+                    .contains(playerLocation.clone().add(0, 1, 0).getBlock().getType().name())) {
+                playerLocation.setY(playerLocation.getY() - 1);
+                LogUtils.debug("block au dessus");
+            }
+            if (isSwiming) {
+                LogUtils.debug("joueur bas");
+                playerLocation.setY(playerLocation.getY() + 1);
+            }
+
+            Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), playerLocation, () -> {
+                player.teleportAsync(playerLocation);
+            });
         }
 
-        if (isSwiming) {
-            LogUtils.debug("joueur bas");
-            playerLocation.setY(playerLocation.getY() + 1);
-        }
-
-        Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), playerLocation, () -> {
-            player.teleportAsync(playerLocation);
-        });
         location.setY(location.clone().getY() - 1); // place the armor stand head in the block
 
         if (debug)
@@ -174,7 +180,9 @@ public class DeathListener implements Listener {
 
             if (store) {
                 event.getDrops().clear();
-                player.getInventory().clear();
+                if (stayOnGrave) {
+                    player.getInventory().clear();
+                }
 
             }
             if (debug)
@@ -195,7 +203,9 @@ public class DeathListener implements Listener {
             if (store) {
                 xp = Math.round(ExperienceUtils.getExp(player) * xpKeepPercentage);
                 event.setDroppedExp(0);
-                player.setLevel(0);
+                if (stayOnGrave) {
+                    player.setLevel(0);
+                }
 
             }
             if (debug)
@@ -285,5 +295,25 @@ public class DeathListener implements Listener {
         }
 
         return Math.floor(location.getY());
+    }
+
+    private boolean isSiegeActiveGlobal() {
+
+        if (Bukkit.getServer().getPluginManager().getPlugin("SiegeWar") == null
+                || !Bukkit.getServer().getPluginManager().isPluginEnabled("SiegeWar")) {
+            LogUtils.info("SiegeWar plugin not found or not enabled.");
+            return false;
+        }
+        return TownyUtils.isSiegeActiveGlobal();
+
+    }
+
+    private boolean isSiegeActive(Player player) {
+        if (Bukkit.getServer().getPluginManager().getPlugin("SiegeWar") == null
+                || !Bukkit.getServer().getPluginManager().isPluginEnabled("SiegeWar")) {
+            LogUtils.info("SiegeWar plugin not found or not enabled.");
+            return false;
+        }
+        return TownyUtils.isSiegeActive(player);
     }
 }
