@@ -134,7 +134,7 @@ public final class GraveLockUtils {
             }
 
             if (storedValue == REJOIN_PENDING_SENTINEL) {
-                return getMoveLockRejoinMillis();
+                return getMoveTownLockMillis();
             }
 
             if (storedValue < 0L) {
@@ -178,10 +178,14 @@ public final class GraveLockUtils {
                         LANG.getString("grave-lock.false-death-chat",
                                 "You must wait %time% seconds before respawning.")
                                 .replace("%time%", String.valueOf(remainingSeconds)));
-                if (isNearIsTownSpawn(player)) {
+                if (isSiegeActive(player)) {
+                    chatMessage += " You are in a siege! (so it's longer)";
+                } else if (isNearIsTownSpawn(player)) {
                     chatMessage += " You are near a town spawn! (so it's longer)";
                 }
                 player.sendMessage(Component.text(chatMessage));
+                player.playNote(player.getLocation(), org.bukkit.Instrument.PIANO,
+                        org.bukkit.Note.natural(1, org.bukkit.Note.Tone.C)); // Instrument.PIANO, note C
             }, delayTicks);
         }
     }
@@ -259,7 +263,6 @@ public final class GraveLockUtils {
             if (!player.isOnline()) {
                 return;
             }
-            player.setGameMode(getReturnGamemode());
         });
     }
 
@@ -285,7 +288,7 @@ public final class GraveLockUtils {
                     }
 
                     showFalseDeathTitle(player);
-                    long rejoinMillis = getMoveLockRejoinMillis();
+                    long rejoinMillis = getMoveTownLockMillis();
                     if (rejoinMillis <= 0L) {
                         realDeath(player);
                         continue;
@@ -356,7 +359,6 @@ public final class GraveLockUtils {
             }
             removeGraveLockState(player);
             pendingRespawnGamemode.add(player.getUniqueId());
-            player.setGameMode(getReturnGamemode());
 
             UUID uuid = player.getUniqueId();
             FileConfiguration gravedLogoutPlayers = loadLogoutStorage();
@@ -371,16 +373,6 @@ public final class GraveLockUtils {
             }
         });
         removeGraveLockState(player);
-    }
-
-    private static GameMode getReturnGamemode() {
-        String gamemode = AxGraves.CONFIG.getString("respawn-return-gamemode", "SURVIVAL");
-        try {
-            return GameMode.valueOf(gamemode.toUpperCase());
-        } catch (IllegalArgumentException ignored) {
-            LogUtils.warn("Invalid gamemode in config: {}", gamemode);
-            return GameMode.SURVIVAL;
-        }
     }
 
     private static FileConfiguration loadStorage() {
@@ -412,21 +404,29 @@ public final class GraveLockUtils {
     }
 
     private static long getRespawnLockSeconds(Player player) {
-        if (isNearIsTownSpawn(player)) {
-            return getMoveLockMillis();
+        if (isSiegeActive(player)) {
+            return getMoveSiegeLockMillis();
+        } else if (isNearIsTownSpawn(player)) {
+            return getMoveTownLockMillis();
         } else {
-            return getMoveLockRejoinMillis();
+            return getMoveNormalLockMillis();
         }
     }
 
-    private static long getMoveLockMillis() {
-        long seconds = AxGraves.CONFIG.getLong("respawn-lock-seconds", DEFAULT_MOVE_LOCK_SECONDS);
+    public static long getMoveNormalLockMillis() {
+        long seconds = AxGraves.CONFIG.getLong("town-respawn-lock-seconds", DEFAULT_MOVE_LOCK_SECONDS);
 
         return Math.max(0L, seconds) * 1000L;
     }
 
-    private static long getMoveLockRejoinMillis() {
-        long seconds = AxGraves.CONFIG.getLong("respawn-rejoin-lock-seconds", DEFAULT_MOVE_LOCK_SECONDS);
+    public static long getMoveSiegeLockMillis() {
+        long seconds = AxGraves.CONFIG.getLong("siege-respawn-lock-seconds", DEFAULT_MOVE_LOCK_SECONDS);
+
+        return Math.max(0L, seconds) * 1000L;
+    }
+
+    public static long getMoveTownLockMillis() {
+        long seconds = AxGraves.CONFIG.getLong("normal-respawn-lock-seconds", DEFAULT_MOVE_LOCK_SECONDS);
         return Math.max(0L, seconds) * 1000L;
     }
 
@@ -438,5 +438,15 @@ public final class GraveLockUtils {
         }
 
         return TownyUtils.isNearTownSpawn(player);
+    }
+
+    private static boolean isSiegeActive(Player player) {
+        if (Bukkit.getServer().getPluginManager().getPlugin("SiegeWar") == null
+                || !Bukkit.getServer().getPluginManager().isPluginEnabled("SiegeWar")) {
+            LogUtils.info("SiegeWar plugin not found or not enabled.");
+            return false;
+        }
+
+        return TownyUtils.isSiegeActive(player);
     }
 }
