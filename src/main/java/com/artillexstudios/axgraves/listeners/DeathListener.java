@@ -124,7 +124,8 @@ public class DeathListener implements Listener {
             }
         }
 
-        LogUtils.debug("[{}] spawning grave", player.getName());
+        if (debug)
+            LogUtils.debug("[{}] spawning grave", player.getName());
         if (disabledWorlds.contains(player.getWorld().getName())) {
             if (debug)
                 LogUtils.debug("[{}] return: disabled world {}", player.getName(), player.getWorld().getName());
@@ -159,10 +160,12 @@ public class DeathListener implements Listener {
             if (!CONFIG.getStringList("safe-blocks")
                     .contains(playerLocation.clone().add(0, 1, 0).getBlock().getType().name())) {
                 playerLocation.setY(playerLocation.getY() - 1);
-                LogUtils.debug("player has a block above");
+                if (debug)
+                    LogUtils.debug("player has a block above");
             }
             if (isSwiming) {
-                LogUtils.debug("player is low (swimming)");
+                if (debug)
+                    LogUtils.debug("player is low (swimming)");
                 playerLocation.setY(playerLocation.getY() + 1);
             }
 
