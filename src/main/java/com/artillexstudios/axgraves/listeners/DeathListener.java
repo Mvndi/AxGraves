@@ -99,6 +99,9 @@ public class DeathListener implements Listener {
             return;
         }
         if (stayOnGrave) {
+            if (player.isInsideVehicle()) {
+                player.leaveVehicle();
+            }
             event.setCancelled(true);
             // Hide and protect player instead of spectator mode
             GraveLockUtils.applyGraveLockState(player);
