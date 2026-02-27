@@ -49,7 +49,6 @@ public final class GraveLockUtils {
     }
 
     public static void removeGraveLockState(Player player) {
-        // Show to all other players (Folia safe)
         for (Player other : Bukkit.getOnlinePlayers()) {
             if (!other.equals(player)) {
                 Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), other.getLocation(), () -> {
@@ -72,7 +71,6 @@ public final class GraveLockUtils {
     private static final long DEFAULT_MOVE_LOCK_SECONDS = 30L;
     private static final long REJOIN_PENDING_SENTINEL = -1L;
     private static final Object LOCK = new Object();
-    private static final Set<UUID> pendingRespawnGamemode = ConcurrentHashMap.newKeySet();
     private static ScheduledFuture<?> cleanupTask;
 
     private GraveLockUtils() {
@@ -265,19 +263,6 @@ public final class GraveLockUtils {
         }
     }
 
-    public static void applyPendingRespawnGamemode(Player player) {
-        UUID uuid = player.getUniqueId();
-        if (!pendingRespawnGamemode.remove(uuid)) {
-            return;
-        }
-
-        Scheduler.get().runAt(player.getLocation(), task -> {
-            if (!player.isOnline()) {
-                return;
-            }
-        });
-    }
-
     private static void cleanupExpiredLocks() {
         synchronized (LOCK) {
             FileConfiguration gravedPlayers = loadStorage();
@@ -370,7 +355,6 @@ public final class GraveLockUtils {
                 return;
             }
             removeGraveLockState(player);
-            pendingRespawnGamemode.add(player.getUniqueId());
 
             UUID uuid = player.getUniqueId();
             FileConfiguration gravedLogoutPlayers = loadLogoutStorage();
