@@ -6,11 +6,8 @@ import org.bukkit.entity.Player;
 import com.artillexstudios.axapi.utils.logging.LogUtils;
 import com.artillexstudios.axgraves.AxGraves;
 import com.gmail.goosius.siegewar.SiegeWarAPI;
-import com.gmail.goosius.siegewar.enums.SiegeSide;
 import com.gmail.goosius.siegewar.objects.BattleSession;
-import com.gmail.goosius.siegewar.objects.Siege;
 import com.palmergames.bukkit.towny.TownyAPI;
-import com.gmail.goosius.siegewar.objects.BattleSession;
 
 public class TownyUtils {
     public static boolean isNearTownSpawn(Player player) {
@@ -24,8 +21,8 @@ public class TownyUtils {
             return deathLocation.distance(player.getWorld().getSpawnLocation());
 
         double distance = deathLocation.distance(spawnLocation);
-        if (AxGraves.isDebugMode())
-            LogUtils.debug("Distance from death location to town spawn: " + distance);
+
+        LogUtils.debug("Distance from death location to town spawn: " + distance);
         return distance;
     }
 
@@ -47,9 +44,10 @@ public class TownyUtils {
     public static boolean isSiegeActiveGlobal() {
         BattleSession battleSession = BattleSession.getBattleSession();
         boolean active = battleSession != null && battleSession.isActive();
-        if (AxGraves.isDebugMode())
-            LogUtils.debug("Checked SiegeWar battle session: " + (battleSession != null ? battleSession.toString() : "null")
-                    + ", active: " + active);
+
+        LogUtils.debug(
+                "Checked SiegeWar battle session: " + (battleSession != null ? battleSession.toString() : "null")
+                        + ", active: " + active);
         return active;
     }
 

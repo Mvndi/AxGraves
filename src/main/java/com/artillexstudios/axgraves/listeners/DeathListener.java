@@ -83,7 +83,15 @@ public class DeathListener implements Listener {
         Player player = event.getEntity();
         Player killer = player.getKiller();
 
-        boolean stayOnGrave = !isSiegeActive(player);
+        boolean stayOnGrave = true;
+
+        if (isSiegeActive(player) && GraveLockUtils.getMoveSiegeLockMillis() <= 0) {
+            stayOnGrave = false;
+        } else if (isNearIsTownSpawn(player) && GraveLockUtils.getMoveTownLockMillis() <= 0) {
+            stayOnGrave = false;
+        } else if (GraveLockUtils.getMoveNormalLockMillis() <= 0) {
+            stayOnGrave = false;
+        }
 
         if (stayOnGrave) {
             if (isRealDeath(player, debug)) {
@@ -315,5 +323,14 @@ public class DeathListener implements Listener {
             return false;
         }
         return TownyUtils.isSiegeActive(player);
+    }
+
+    private boolean isNearIsTownSpawn(Player player) {
+        if (Bukkit.getServer().getPluginManager().getPlugin("Towny") == null
+                || !Bukkit.getServer().getPluginManager().isPluginEnabled("Towny")) {
+            LogUtils.info("Towny plugin not found or not enabled.");
+            return false;
+        }
+        return TownyUtils.isNearTownSpawn(player);
     }
 }
