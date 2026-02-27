@@ -100,7 +100,7 @@ public final class AxGraves extends AxPlugin {
 
         TickGraves.stop();
         SaveGraves.stop();
-        GraveLockUtils.stopLockExpiryChecker();
+//        GraveLockUtils.stopLockExpiryChecker();
 
         for (Grave grave : SpawnedGraves.getGraves()) {
             if (!CONFIG.getBoolean("save-graves.enabled", true))
