@@ -153,6 +153,54 @@ public class GraveLockListener implements Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPlayerMountMove(org.bukkit.event.player.PlayerMoveEvent event) {
+        Player player = event.getPlayer();
+        if (!GraveLockUtils.isLocked(player))
+            return;
+
+        if (player.isInsideVehicle()) {
+            org.bukkit.Location from = event.getFrom();
+            org.bukkit.Location to = event.getTo();
+
+            if (from.getX() != to.getX() || from.getY() != to.getY() || from.getZ() != to.getZ()) {
+                event.setTo(from.clone().setDirection(to.getDirection()));
+                sendDeniedActionMessage(player, "mount-movement");
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPlayerInteractEntity(org.bukkit.event.player.PlayerInteractEntityEvent event) {
+        Player player = event.getPlayer();
+        if (!GraveLockUtils.isLocked(player))
+            return;
+
+        Entity entity = event.getRightClicked();
+        // Empêche toute interaction avec une monture
+        if (entity instanceof org.bukkit.entity.Vehicle
+                || entity instanceof org.bukkit.entity.Horse
+                || entity instanceof org.bukkit.entity.AbstractHorse
+                || entity instanceof org.bukkit.entity.Minecart
+                || entity instanceof org.bukkit.entity.Boat) {
+            event.setCancelled(true);
+            sendDeniedActionMessage(player, "mount-interact");
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPlayerDismount(org.bukkit.event.entity.EntityDismountEvent event) {
+        if (!(event.getEntity() instanceof Player player))
+            return;
+
+        if (!GraveLockUtils.isLocked(player))
+            return;
+
+        // Empêche de descendre de la monture (optionnel, selon le besoin)
+        event.setCancelled(true);
+        sendDeniedActionMessage(player, "mount-dismount");
+    }
+
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
         lastActionMessage.remove(event.getPlayer().getUniqueId());
