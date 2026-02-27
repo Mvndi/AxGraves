@@ -1,14 +1,21 @@
 package com.artillexstudios.axgraves.listeners;
 
 import com.artillexstudios.axgraves.utils.GraveLockUtils;
+import com.destroystokyo.paper.event.player.PlayerPickupExperienceEvent;
+
+import io.papermc.paper.event.player.PlayerPickItemEvent;
+
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerPickupArrowEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -38,6 +45,43 @@ public class GraveLockListener implements Listener {
     private final Map<UUID, Long> lastActionMessage = new ConcurrentHashMap<>();
 
     public GraveLockListener(JavaPlugin plugin) {
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onDrop(PlayerDropItemEvent event) {
+        Player player = event.getPlayer();
+        if (!GraveLockUtils.isLocked(player))
+            return;
+
+        event.setCancelled(true);
+        sendDeniedActionMessage(player, "item-drop");
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPickup(PlayerPickItemEvent event) {
+        Player player = event.getPlayer();
+        if (GraveLockUtils.isLocked(player)) {
+            event.setCancelled(true);
+            sendDeniedActionMessage(player, "item-pickup");
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPickupXp(PlayerPickupExperienceEvent event) {
+        Player player = event.getPlayer();
+        if (GraveLockUtils.isLocked(player)) {
+            event.setCancelled(true);
+            sendDeniedActionMessage(player, "item-pickup");
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPickupArrow(PlayerPickupArrowEvent event) {
+        Player player = event.getPlayer();
+        if (GraveLockUtils.isLocked(player)) {
+            event.setCancelled(true);
+            sendDeniedActionMessage(player, "item-pickup");
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
