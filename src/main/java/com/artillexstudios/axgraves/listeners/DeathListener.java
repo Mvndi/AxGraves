@@ -95,10 +95,10 @@ public class DeathListener implements Listener {
             stayOnGrave = false;
         }
 
+        if (isRealDeath(player, debug)) {
+            return;
+        }
         if (stayOnGrave) {
-            if (isRealDeath(player, debug)) {
-                return;
-            }
             event.setCancelled(true);
             // Hide and protect player instead of spectator mode
             GraveLockUtils.applyGraveLockState(player);

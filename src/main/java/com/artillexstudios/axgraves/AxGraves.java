@@ -85,6 +85,13 @@ public final class AxGraves extends AxPlugin {
 
         if (CONFIG.getBoolean("update-notifier.enabled", true))
             new UpdateNotifier(this, 5076);
+
+        // Safety: unhide all players on plugin enable
+        for (org.bukkit.entity.Player player : getServer().getOnlinePlayers()) {
+            com.artillexstudios.axgraves.utils.GraveLockUtils.removeGraveLockState(player);
+        }
+        getServer().getConsoleSender()
+                .sendMessage(org.bukkit.ChatColor.GREEN + "All players have been unhidden on plugin enable.");
     }
 
     public void disable() {
