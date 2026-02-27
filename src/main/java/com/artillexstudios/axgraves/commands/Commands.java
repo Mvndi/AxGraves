@@ -16,7 +16,7 @@ import revxrsal.commands.orphan.OrphanCommand;
 
 public class Commands implements OrphanCommand {
 
-    @DefaultFor({"~", "~ help"})
+    @DefaultFor({ "~", "~ help" })
     @CommandPermission("axgraves.help")
     public void help(@NotNull CommandSender sender) {
         Help.INSTANCE.execute(sender);
@@ -36,7 +36,26 @@ public class Commands implements OrphanCommand {
 
     @Subcommand("tp")
     @CommandPermission("axgraves.tp")
-    public void tp(@NotNull Player sender, @Optional World world, @Optional Double x, @Optional Double y, @Optional Double z) {
+    public void tp(@NotNull Player sender, @Optional World world, @Optional Double x, @Optional Double y,
+            @Optional Double z) {
         Teleport.INSTANCE.execute(sender, world, x, y, z);
+    }
+
+    @Subcommand("unlock")
+    @CommandPermission("axgraves.unlock")
+    public void unlock(@NotNull CommandSender sender, @NotNull Player target) {
+        com.artillexstudios.axgraves.utils.GraveLockUtils.removeGraveLockState(target);
+        sender.sendMessage(org.bukkit.ChatColor.GREEN + "Grave lock removed for " + target.getName());
+    }
+
+    @Subcommand("unlock")
+    @CommandPermission("axgraves.unlock")
+    public void unlockAll(@NotNull CommandSender sender) {
+        int count = 0;
+        for (Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
+            com.artillexstudios.axgraves.utils.GraveLockUtils.removeGraveLockState(player);
+            count++;
+        }
+        sender.sendMessage(org.bukkit.ChatColor.GREEN + "Grave lock removed for all online players (" + count + ")");
     }
 }
