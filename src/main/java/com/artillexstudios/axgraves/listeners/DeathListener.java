@@ -41,6 +41,9 @@ public class DeathListener implements Listener {
     private static boolean storeXP;
     private static float xpKeepPercentage;
 
+    // Map pour stocker le message de mort original par joueur
+    private static final java.util.Map<java.util.UUID, String> originalDeathMessages = new java.util.HashMap<>();
+
     public static void reload() {
         disabledWorlds = CONFIG.getStringList("disabled-worlds");
         blacklistedDeathCauses = CONFIG.getStringList("blacklisted-death-causes");
@@ -86,19 +89,35 @@ public class DeathListener implements Listener {
         boolean stayOnGrave = true;
 
         if (killer == null || !(killer instanceof Player)) {
+            LogUtils.debug("[{}] killer is not a player", player.getName());
             stayOnGrave = false;
         } else if (isSiegeActive(player) && GraveLockUtils.getMoveSiegeLockMillis() <= 0) {
+            LogUtils.debug("[{}] siege is active and move siege lock is disabled", player.getName());
             stayOnGrave = false;
         } else if (isNearIsTownSpawn(player) && GraveLockUtils.getMoveTownLockMillis() <= 0) {
+            LogUtils.debug("[{}] near town spawn and move town lock is disabled", player.getName());
             stayOnGrave = false;
         } else if (GraveLockUtils.getMoveNormalLockMillis() <= 0) {
+            LogUtils.debug("[{}] move normal lock is disabled", player.getName());
             stayOnGrave = false;
+        } else {
+            LogUtils.debug("[{}] killer: {}, siege active: {}, near town spawn: {}", player.getName(),
+                    killer.getName(), isSiegeActive(player), isNearIsTownSpawn(player));
         }
-
-        if (isRealDeath(player, debug)) {
-            return;
-        }
+        boolean isRealDeath = isRealDeath(player, debug);
         if (stayOnGrave) {
+            if (!isRealDeath) {
+                if (event.deathMessage() != null) {
+                    originalDeathMessages.put(player.getUniqueId(), event.deathMessage().toString());
+                }
+            } else {
+                event.deathMessage(null);
+                String savedMessage = originalDeathMessages.remove(player.getUniqueId());
+                if (savedMessage != null) {
+                    Bukkit.getServer().sendMessage(net.kyori.adventure.text.Component.text(savedMessage));
+                }
+                return;
+            }
             if (player.isInsideVehicle()) {
                 player.leaveVehicle();
             }
