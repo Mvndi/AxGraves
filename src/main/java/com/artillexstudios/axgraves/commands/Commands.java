@@ -49,7 +49,7 @@ public class Commands implements OrphanCommand {
     }
 
     @Subcommand("unlockAll")
-    @CommandPermission("axgraves.unlock")
+    @CommandPermission("axgraves.unlockAll")
     public void unlockAll(@NotNull CommandSender sender) {
         int count = 0;
         for (Player player : org.bukkit.Bukkit.getOnlinePlayers()) {

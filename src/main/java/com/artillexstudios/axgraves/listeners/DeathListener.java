@@ -11,7 +11,6 @@ import com.artillexstudios.axgraves.utils.GraveLockUtils;
 import com.artillexstudios.axgraves.utils.TownyUtils;
 
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
@@ -28,7 +27,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import static com.artillexstudios.axgraves.AxGraves.CONFIG;
 
@@ -88,11 +86,7 @@ public class DeathListener implements Listener {
 
         boolean stayOnGrave = true;
 
-        if (killer == null || !(killer instanceof Player)) {
-            LogUtils.debug("[{}] killer is not a player", player.getName());
-            stayOnGrave = false;
-        } else if (isSiegeActive(player) && GraveLockUtils.getMoveSiegeLockMillis() <= 0) {
-            LogUtils.debug("[{}] siege is active and move siege lock is disabled", player.getName());
+        if (isSiegeActive(player) && GraveLockUtils.getMoveSiegeLockMillis() <= 0) {
             stayOnGrave = false;
         } else if (isNearIsTownSpawn(player) && GraveLockUtils.getMoveTownLockMillis() <= 0) {
             LogUtils.debug("[{}] near town spawn and move town lock is disabled", player.getName());
