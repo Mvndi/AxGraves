@@ -151,14 +151,9 @@ public final class GraveLockUtils {
         long fadeOut = 0L;
         long stay = interval + 500L;
         int updates = (int) Math.ceil(totalMillis / (double) interval);
-        boolean isNearTown = false;
-        try {
-            isNearTown = isNearIsTownSpawn(player);
-        } catch (Exception ignored) {
-        }
+
         for (int i = 0; i < updates; i++) {
             long delayTicks = Math.max(1, (i * interval) / 50); // Folia: delay ticks must be >= 1
-            final boolean nearTown = isNearTown;
             Bukkit.getRegionScheduler().runDelayed(AxGraves.getInstance(), player.getLocation(), (ignored) -> {
                 long remainingMillis = getRemainingLockMillis(player);
                 long remainingSeconds = Math.max(1L, (remainingMillis + 999L) / 1000L);
@@ -166,15 +161,21 @@ public final class GraveLockUtils {
                         LANG.getString("grave-lock.false-death-subtitle",
                                 "You will stand on your grave for %time% seconds")
                                 .replace("%time%", String.valueOf(remainingSeconds)));
-                if (nearTown) {
-                    subtitle += "\n§7(Longer because you are near your town)";
-                }
                 player.showTitle(Title.title(
                         Component.text(StringUtils
                                 .formatToString(LANG.getString("grave-lock.false-death-title", "You just died"))),
                         Component.text(subtitle),
                         Title.Times.times(Duration.ofMillis(fadeIn), Duration.ofMillis(stay),
                                 Duration.ofMillis(fadeOut))));
+                // Send chat message as well
+                String chatMessage = StringUtils.formatToString(
+                        LANG.getString("grave-lock.false-death-chat",
+                                "You must wait %time% seconds before respawning.")
+                                .replace("%time%", String.valueOf(remainingSeconds)));
+                if (isNearIsTownSpawn(player)) {
+                    chatMessage += " You are near a town spawn! (so it's longer)";
+                }
+                player.sendMessage(Component.text(chatMessage));
             }, delayTicks);
         }
     }
