@@ -48,8 +48,8 @@ public class Commands implements OrphanCommand {
         sender.sendMessage(org.bukkit.ChatColor.GREEN + "Grave lock removed for " + target.getName());
     }
 
-    @Subcommand("unlock")
-    @CommandPermission("axgraves.unlock")
+    @Subcommand("unlockAll")
+    @CommandPermission("axgraves.unlockAll")
     public void unlockAll(@NotNull CommandSender sender) {
         int count = 0;
         for (Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
