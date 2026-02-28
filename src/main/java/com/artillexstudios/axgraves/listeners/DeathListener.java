@@ -12,6 +12,7 @@ import com.artillexstudios.axgraves.utils.TownyUtils;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -129,18 +130,16 @@ public class DeathListener implements Listener {
         }
 
         if (stayOnGrave) {
-            if (!isRealDeath) {
-                long currentTime = System.currentTimeMillis();
-                gravedPlayers.set(playerUuid, currentTime);
+            long currentTime = System.currentTimeMillis();
+            gravedPlayers.set(playerUuid, currentTime);
 
-                try {
-                    gravedPlayers.save(graveFile);
-                } catch (IOException e) {
-                    LogUtils.error("Failed to save graved-players.yml", e);
-                }
+            try {
+                gravedPlayers.save(graveFile);
+            } catch (IOException e) {
+                LogUtils.error("Failed to save graved-players.yml", e);
             }
-            if (player.isInsideVehicle()) {
-                player.leaveVehicle();
+            if (player.getVehicle() != null) {
+                player.getVehicle().getScheduler().run(AxGraves.getInstance(), scheduledTask -> player.getVehicle().removePassenger(player), null);
             }
             Bukkit.getServer().sendMessage(event.deathMessage());
             event.setCancelled(true);

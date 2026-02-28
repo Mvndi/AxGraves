@@ -53,7 +53,7 @@ public class TownyUtils {
     }
 
     public static boolean isSiegeActive(Player player) {
-        return SiegeWarAPI.hasSiege(player);
+        return SiegeWarAPI.isLocationInActiveSiegeZone(player.getLocation()) && SiegeWarAPI.isBattleSessionActive();
     }
 
 }

@@ -176,27 +176,10 @@ public class GraveLockListener implements Listener {
 
         Entity entity = event.getRightClicked();
         // Empêche toute interaction avec une monture
-        if (entity instanceof org.bukkit.entity.Vehicle
-                || entity instanceof org.bukkit.entity.Horse
-                || entity instanceof org.bukkit.entity.AbstractHorse
-                || entity instanceof org.bukkit.entity.Minecart
-                || entity instanceof org.bukkit.entity.Boat) {
+        if (entity instanceof org.bukkit.entity.Vehicle) {
             event.setCancelled(true);
             sendDeniedActionMessage(player, "mount-interact");
         }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onPlayerDismount(org.bukkit.event.entity.EntityDismountEvent event) {
-        if (!(event.getEntity() instanceof Player player))
-            return;
-
-        if (!GraveLockUtils.isLocked(player))
-            return;
-
-        // Empêche de descendre de la monture (optionnel, selon le besoin)
-        event.setCancelled(true);
-        sendDeniedActionMessage(player, "mount-dismount");
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
