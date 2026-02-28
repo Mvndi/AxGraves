@@ -87,34 +87,57 @@ public class DeathListener implements Listener {
         boolean stayOnGrave = true;
 
         if (killer == null || !(killer instanceof Player)) {
-            LogUtils.debug("[{}] killer is not a player", player.getName());
+            if (debug)
+                LogUtils.debug("[{}] killer is not a player", player.getName());
             stayOnGrave = false;
         } else if (isSiegeActive(player) && GraveLockUtils.getMoveSiegeLockMillis() <= 0) {
-            LogUtils.debug("[{}] siege is active and move siege lock is disabled", player.getName());
+            if (debug)
+                LogUtils.debug("[{}] siege is active and move siege lock is disabled", player.getName());
             stayOnGrave = false;
         } else if (isNearIsTownSpawn(player) && GraveLockUtils.getMoveTownLockMillis() <= 0) {
-            LogUtils.debug("[{}] near town spawn and move town lock is disabled", player.getName());
+            if (debug)
+                LogUtils.debug("[{}] near town spawn and move town lock is disabled", player.getName());
             stayOnGrave = false;
         } else if (GraveLockUtils.getMoveNormalLockMillis() <= 0) {
-            LogUtils.debug("[{}] move normal lock is disabled", player.getName());
+            if (debug)
+                LogUtils.debug("[{}] move normal lock is disabled", player.getName());
             stayOnGrave = false;
         } else {
-            LogUtils.debug("[{}] killer: {}, siege active: {}, near town spawn: {}", player.getName(),
-                    killer.getName(), isSiegeActive(player), isNearIsTownSpawn(player));
+            if (debug)
+                LogUtils.debug("[{}] killer: {}, siege active: {}, near town spawn: {}", player.getName(),
+                        killer.getName(), isSiegeActive(player), isNearIsTownSpawn(player));
         }
         boolean isRealDeath = isRealDeath(player, debug);
+        File graveFile = new File(AxGraves.getInstance().getDataFolder(), "graved-players.yml");
+        FileConfiguration gravedPlayers = YamlConfiguration.loadConfiguration(graveFile);
+        String playerUuid = player.getUniqueId().toString();
+        if (isRealDeath) {
+            if (debug)
+                LogUtils.debug("[{}] is a real death", player.getName());
+            gravedPlayers.set(playerUuid, null);
+            try {
+                gravedPlayers.save(graveFile);
+            } catch (IOException e) {
+                LogUtils.error("Failed to save graved-players.yml", e);
+            }
+            long deathTime = gravedPlayers.getLong(playerUuid);
+            if (debug)
+                LogUtils.debug("[{}] death recorded at: {}", player.getName(), new java.util.Date(deathTime));
+
+            event.deathMessage(null);
+            return;
+        }
+
         if (stayOnGrave) {
             if (!isRealDeath) {
-                if (event.deathMessage() != null) {
-                    originalDeathMessages.put(player.getUniqueId(), event.deathMessage().toString());
+                long currentTime = System.currentTimeMillis();
+                gravedPlayers.set(playerUuid, currentTime);
+
+                try {
+                    gravedPlayers.save(graveFile);
+                } catch (IOException e) {
+                    LogUtils.error("Failed to save graved-players.yml", e);
                 }
-            } else {
-                event.deathMessage(null);
-                String savedMessage = originalDeathMessages.remove(player.getUniqueId());
-                if (savedMessage != null) {
-                    Bukkit.getServer().sendMessage(net.kyori.adventure.text.Component.text(savedMessage));
-                }
-                return;
             }
             if (player.isInsideVehicle()) {
                 player.leaveVehicle();
@@ -127,22 +150,27 @@ public class DeathListener implements Listener {
                 killer.sendMessage("you just killed " + player.getName());
             }
         }
+        if (debug)
+            LogUtils.debug("[{}] spawning grave", player.getName());
+        if (disabledWorlds.contains(player.getWorld().getName()))
 
-        LogUtils.debug("[{}] spawning grave", player.getName());
-        if (disabledWorlds.contains(player.getWorld().getName())) {
-            LogUtils.debug("[{}] return: disabled world {}", player.getName(), player.getWorld().getName());
+        {
+            if (debug)
+                LogUtils.debug("[{}] return: disabled world {}", player.getName(), player.getWorld().getName());
             return;
         }
 
         if (!player.hasPermission("axgraves.allowgraves")) {
-            LogUtils.debug("[{}] return: missing permission axgraves.allowgraves", player.getName());
+            if (debug)
+                LogUtils.debug("[{}] return: missing permission axgraves.allowgraves", player.getName());
             return;
         }
 
         if (player.getLastDamageCause() != null
                 && blacklistedDeathCauses.contains(player.getLastDamageCause().getCause().name())) {
-            LogUtils.debug("[{}] return: blacklisted death cause {}", player.getName(),
-                    player.getLastDamageCause().getCause().name());
+            if (debug)
+                LogUtils.debug("[{}] return: blacklisted death cause {}", player.getName(),
+                        player.getLastDamageCause().getCause().name());
             return;
         }
 
@@ -152,18 +180,21 @@ public class DeathListener implements Listener {
         if (stayOnGrave) {
 
             Boolean isSwiming = Math.floor(player.getEyeLocation().getY() - player.getLocation().getY()) < 0.5;
-            LogUtils.debug("isSwiming ", player.isSwimming(), player.getEyeLocation().getY(),
-                    player.getLocation().getY());
+            if (debug)
+                LogUtils.debug("isSwiming ", player.isSwimming(), player.getEyeLocation().getY(),
+                        player.getLocation().getY());
             Location playerLocation = location.clone();
             playerLocation.setX(Math.floor(playerLocation.getX()) + 0.5);
             playerLocation.setZ(Math.floor(playerLocation.getZ()) + 0.5);
             if (!CONFIG.getStringList("safe-blocks")
                     .contains(playerLocation.clone().add(0, 1, 0).getBlock().getType().name())) {
                 playerLocation.setY(playerLocation.getY() - 1);
-                LogUtils.debug("player has a block above");
+                if (debug)
+                    LogUtils.debug("player has a block above");
             }
             if (isSwiming) {
-                LogUtils.debug("player is low (swimming)");
+                if (debug)
+                    LogUtils.debug("player is low (swimming)");
                 playerLocation.setY(playerLocation.getY() + 1);
             }
 
@@ -174,7 +205,8 @@ public class DeathListener implements Listener {
 
         location.setY(location.clone().getY() - 1); // place the armor stand head in the block
 
-        LogUtils.debug("[{}] location moved to {}", player.getName(), location.toString());
+        if (debug)
+            LogUtils.debug("[{}] location moved to {}", player.getName(), location.toString());
 
         final GravePreSpawnEvent gravePreSpawnEvent = new GravePreSpawnEvent(player, location);
         Bukkit.getPluginManager().callEvent(gravePreSpawnEvent);
@@ -183,10 +215,12 @@ public class DeathListener implements Listener {
             return;
         }
 
-        LogUtils.debug("[{}] storeItems: {} - getKeepInventory: {} - overrideKeepInventory: {}", player.getName(),
-                storeItems, event.getKeepInventory(), overrideKeepInventory);
-        LogUtils.debug("[{}] storeXP: {} - getKeepLevel: {} - overrideKeepLevel: {}", player.getName(), storeXP,
-                event.getKeepLevel(), overrideKeepLevel);
+        if (debug)
+            LogUtils.debug("[{}] storeItems: {} - getKeepInventory: {} - overrideKeepInventory: {}", player.getName(),
+                    storeItems, event.getKeepInventory(), overrideKeepInventory);
+        if (debug)
+            LogUtils.debug("[{}] storeXP: {} - getKeepLevel: {} - overrideKeepLevel: {}", player.getName(), storeXP,
+                    event.getKeepLevel(), overrideKeepLevel);
 
         List<ItemStack> drops = new ArrayList<>();
         if (storeItems) {
@@ -208,7 +242,8 @@ public class DeathListener implements Listener {
                 }
 
             }
-            LogUtils.debug("[{}] store: {} - drops size: {}", player.getName(), store, drops.size());
+            if (debug)
+                LogUtils.debug("[{}] store: {} - drops size: {}", player.getName(), store, drops.size());
         }
 
         int xp = 0;
@@ -230,16 +265,19 @@ public class DeathListener implements Listener {
                 }
 
             }
-            LogUtils.debug("[{}] store: {} - xp: {}", player.getName(), store, xp);
+            if (debug)
+                LogUtils.debug("[{}] store: {} - xp: {}", player.getName(), store, xp);
         }
 
         if (drops.isEmpty() && xp == 0) {
-            LogUtils.debug("[{}] return: drops empty and xp is 0", player.getName());
+            if (debug)
+                LogUtils.debug("[{}] return: drops empty and xp is 0", player.getName());
             return;
         }
         Grave grave = new Grave(location, player, drops, xp, System.currentTimeMillis());
         SpawnedGraves.addGrave(grave);
-        LogUtils.debug("[{}] created and added grave", player.getName());
+        if (debug)
+            LogUtils.debug("[{}] created and added grave", player.getName());
 
         final GraveSpawnEvent graveSpawnEvent = new GraveSpawnEvent(player, grave);
         Bukkit.getPluginManager().callEvent(graveSpawnEvent);
@@ -249,28 +287,12 @@ public class DeathListener implements Listener {
     private boolean isRealDeath(Player player, boolean debug) {
         File graveFile = new File(AxGraves.getInstance().getDataFolder(), "graved-players.yml");
         FileConfiguration gravedPlayers = YamlConfiguration.loadConfiguration(graveFile);
-
         String playerUuid = player.getUniqueId().toString();
-        long currentTime = System.currentTimeMillis();
 
-        if (!gravedPlayers.contains(playerUuid)) {
-            gravedPlayers.set(playerUuid, currentTime);
-            try {
-                gravedPlayers.save(graveFile);
-            } catch (IOException e) {
-                LogUtils.error("Failed to save graved-players.yml", e);
-            }
-            return false;
-        } else {
-            gravedPlayers.set(playerUuid, null);
-            try {
-                gravedPlayers.save(graveFile);
-            } catch (IOException e) {
-                LogUtils.error("Failed to save graved-players.yml", e);
-            }
-            long deathTime = gravedPlayers.getLong(playerUuid);
-            LogUtils.debug("[{}] death recorded at: {}", player.getName(), new java.util.Date(deathTime));
+        if (gravedPlayers.contains(playerUuid)) {
             return true;
+        } else {
+            return false;
         }
     }
 
