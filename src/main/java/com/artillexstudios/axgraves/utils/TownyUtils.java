@@ -22,7 +22,8 @@ public class TownyUtils {
 
         double distance = deathLocation.distance(spawnLocation);
 
-        LogUtils.debug("Distance from death location to town spawn: " + distance);
+        if (AxGraves.isDebugMode())
+            LogUtils.debug("Distance from death location to town spawn: " + distance, AxGraves.isDebugMode());
         return distance;
     }
 
@@ -45,7 +46,7 @@ public class TownyUtils {
         BattleSession battleSession = BattleSession.getBattleSession();
         boolean active = battleSession != null && battleSession.isActive();
 
-        LogUtils.debug(
+        AxGraves.debug(
                 "Checked SiegeWar battle session: " + (battleSession != null ? battleSession.toString() : "null")
                         + ", active: " + active);
         return active;
