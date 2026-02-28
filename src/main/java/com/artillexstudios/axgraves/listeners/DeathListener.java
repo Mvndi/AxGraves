@@ -142,13 +142,12 @@ public class DeathListener implements Listener {
             if (player.isInsideVehicle()) {
                 player.leaveVehicle();
             }
+            Bukkit.getServer().sendMessage(event.deathMessage());
             event.setCancelled(true);
+
             // Hide and protect player instead of spectator mode
             GraveLockUtils.applyGraveLockState(player);
             GraveLockUtils.showFalseDeathTitle(player);
-            if (killer != null) {
-                killer.sendMessage("you just killed " + player.getName());
-            }
         }
         if (debug)
             LogUtils.debug("[{}] spawning grave", player.getName());
