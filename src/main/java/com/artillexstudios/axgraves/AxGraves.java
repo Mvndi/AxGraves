@@ -10,6 +10,7 @@ import com.artillexstudios.axapi.libs.boostedyaml.settings.updater.UpdaterSettin
 import com.artillexstudios.axapi.metrics.AxMetrics;
 import com.artillexstudios.axapi.utils.MessageUtils;
 import com.artillexstudios.axapi.utils.featureflags.FeatureFlags;
+import com.artillexstudios.axapi.utils.logging.LogUtils;
 import com.artillexstudios.axgraves.commands.CommandManager;
 import com.artillexstudios.axgraves.grave.Grave;
 import com.artillexstudios.axgraves.grave.GravePlaceholders;
@@ -93,7 +94,7 @@ public final class AxGraves extends AxPlugin {
 
         TickGraves.stop();
         SaveGraves.stop();
-//        GraveLockUtils.stopLockExpiryChecker();
+        // GraveLockUtils.stopLockExpiryChecker();
 
         for (Grave grave : SpawnedGraves.getGraves()) {
             if (!CONFIG.getBoolean("save-graves.enabled", true))
@@ -119,5 +120,12 @@ public final class AxGraves extends AxPlugin {
         FeatureFlags.ENABLE_PACKET_LISTENERS.set(true);
         FeatureFlags.PLACEHOLDER_API_HOOK.set(true);
         FeatureFlags.PLACEHOLDER_API_IDENTIFIER.set("axgraves");
+    }
+
+    public static void debug(String message) {
+        if (debugMode || CONFIG.getBoolean("debug", false)) {
+            LogUtils.debug(message);
+        }
+
     }
 }
