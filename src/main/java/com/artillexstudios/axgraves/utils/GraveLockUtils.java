@@ -414,7 +414,7 @@ public final class GraveLockUtils {
         }
     }
 
-    private static long getRespawnLockSeconds(Player player) {
+    public static long getRespawnLockSeconds(Player player) {
         if (isSiegeActive(player)) {
             return getMoveSiegeLockMillis();
         } else if (isNearIsTownSpawn(player)) {
