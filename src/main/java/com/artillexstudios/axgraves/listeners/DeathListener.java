@@ -31,9 +31,6 @@ public class DeathListener implements Listener {
     private static boolean storeXP;
     private static float xpKeepPercentage;
 
-    // Map pour stocker le message de mort original par joueur
-    private static final java.util.Map<java.util.UUID, String> originalDeathMessages = new java.util.HashMap<>();
-
     public static void reload() {
         disabledWorlds = CONFIG.getStringList("disabled-worlds");
         blacklistedDeathCauses = CONFIG.getStringList("blacklisted-death-causes");
@@ -94,21 +91,12 @@ public class DeathListener implements Listener {
                 LogUtils.debug("[{}] killer: {}, siege active: {}, near town spawn: {}", player.getName(),
                         killer.getName(), isSiegeActive(player), isNearIsTownSpawn(player));
         }
-        boolean isRealDeath = isRealDeath(player, debug);
-        // File graveFile = new File(AxGraves.getInstance().getDataFolder(), "graved-players.yml");
-        // FileConfiguration gravedPlayers = YamlConfiguration.loadConfiguration(graveFile);
-        // String playerUuid = player.getUniqueId().toString();
-        if (isRealDeath) {
+        if (isRealDeath(player)) {
             if (debug)
                 LogUtils.debug("[{}] is a real death", player.getName());
-            // gravedPlayers.set(playerUuid, null);
+
             GraveLockUtils.unsetGravedPlayer(player);
-            // try {
-            // gravedPlayers.save(graveFile);
-            // } catch (IOException e) {
-            // LogUtils.error("Failed to save graved-players.yml", e);
-            // }
-            // long deathTime = gravedPlayers.getLong(playerUuid);
+
             long deathTime = GraveLockUtils.getGravedPlayer(player);
             if (debug)
                 LogUtils.debug("[{}] death recorded at: {}", player.getName(), new java.util.Date(deathTime));
@@ -119,14 +107,8 @@ public class DeathListener implements Listener {
 
         if (stayOnGrave) {
             long currentTime = System.currentTimeMillis();
-            // gravedPlayers.set(playerUuid, currentTime);
             GraveLockUtils.setGravedPlayer(player, currentTime);
 
-            // try {
-            // gravedPlayers.save(graveFile);
-            // } catch (IOException e) {
-            // LogUtils.error("Failed to save graved-players.yml", e);
-            // }
             if (player.getVehicle() != null) {
                 player.getVehicle().getScheduler().run(AxGraves.getInstance(),
                         scheduledTask -> player.getVehicle().removePassenger(player), null);
@@ -272,12 +254,8 @@ public class DeathListener implements Listener {
 
     }
 
-    private boolean isRealDeath(Player player, boolean debug) {
-        // File graveFile = new File(AxGraves.getInstance().getDataFolder(), "graved-players.yml");
-        // FileConfiguration gravedPlayers = YamlConfiguration.loadConfiguration(graveFile);
-        // String playerUuid = player.getUniqueId().toString();
+    private boolean isRealDeath(Player player) {
         return GraveLockUtils.isGravedPlayer(player);
-        // return gravedPlayers.contains(playerUuid);
     }
 
     private double findSafeY(Location location) {
@@ -316,17 +294,6 @@ public class DeathListener implements Listener {
         }
 
         return Math.floor(location.getY());
-    }
-
-    private boolean isSiegeActiveGlobal() {
-
-        if (Bukkit.getServer().getPluginManager().getPlugin("SiegeWar") == null
-                || !Bukkit.getServer().getPluginManager().isPluginEnabled("SiegeWar")) {
-            LogUtils.info("SiegeWar plugin not found or not enabled.");
-            return false;
-        }
-        return TownyUtils.isSiegeActiveGlobal();
-
     }
 
     private boolean isSiegeActive(Player player) {
