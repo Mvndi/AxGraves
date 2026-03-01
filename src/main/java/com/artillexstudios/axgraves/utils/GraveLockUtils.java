@@ -107,12 +107,11 @@ public final class GraveLockUtils {
     }
 
     public static long getRemainingLockMillis(Player player) {
-        long now = System.currentTimeMillis();
-
         if (!isGravedPlayer(player)) {
             return 0L;
         }
 
+        long now = System.currentTimeMillis();
         long storedValue = getGravedPlayer(player);
         if (storedValue == 0L) {
             return 0L;
@@ -183,10 +182,9 @@ public final class GraveLockUtils {
     }
 
     public static void onPlayerJoin(Player player) {
-        if (getRemainingLockMillis(player) - System.currentTimeMillis() <= 0) {
+        if (getRemainingLockMillis(player) <= 0) {
             removeGraveLockState(player);
         } else if (isGravedLogoutPlayer(player)) {
-            setGravedPlayer(player);
             unsetGravedLogoutPlayer(player);
 
             applyGraveLockState(player);
@@ -205,7 +203,6 @@ public final class GraveLockUtils {
         setGravedLogoutPlayer(player);
 
         player.setHealth(0.0D);
-        LogUtils.info("Player {} logged out while locked, applying death", player.getName());
     }
 
     public static void startLockExpiryChecker() {
@@ -231,6 +228,10 @@ public final class GraveLockUtils {
         long now = System.currentTimeMillis();
 
         for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!isGravedPlayer(player)) {
+                continue;
+            }
+
             long storedValue = getGravedPlayer(player);
             if (storedValue == 0L) {
                 unsetGravedPlayer(player);
