@@ -3,7 +3,7 @@
  */
 
 group = "com.artillexstudios"
-version = "1.26.3"
+version = "1.26.4"
 description = "AxGraves"
 java.sourceCompatibility = JavaVersion.VERSION_21
 var mainMinecraftVersion = "1.21.11"
