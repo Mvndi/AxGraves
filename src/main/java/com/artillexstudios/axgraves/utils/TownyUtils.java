@@ -1,13 +1,11 @@
 package com.artillexstudios.axgraves.utils;
 
-import org.bukkit.Location;
-import org.bukkit.entity.Player;
-
 import com.artillexstudios.axapi.utils.logging.LogUtils;
 import com.artillexstudios.axgraves.AxGraves;
 import com.gmail.goosius.siegewar.SiegeWarAPI;
-import com.gmail.goosius.siegewar.objects.BattleSession;
 import com.palmergames.bukkit.towny.TownyAPI;
+import org.bukkit.Location;
+import org.bukkit.entity.Player;
 
 public class TownyUtils {
     public static boolean isNearTownSpawn(Player player) {
@@ -40,16 +38,6 @@ public class TownyUtils {
             LogUtils.warn("Failed to get town spawn for player " + player.getName(), e);
             return null;
         }
-    }
-
-    public static boolean isSiegeActiveGlobal() {
-        BattleSession battleSession = BattleSession.getBattleSession();
-        boolean active = battleSession != null && battleSession.isActive();
-
-        AxGraves.debug(
-                "Checked SiegeWar battle session: " + (battleSession != null ? battleSession.toString() : "null")
-                        + ", active: " + active);
-        return active;
     }
 
     public static boolean isSiegeActive(Player player) {
