@@ -415,29 +415,29 @@ public final class GraveLockUtils {
     // }
 
 
-    private static void setGravedPlayer(Player player, long value) {
+    public static void setGravedPlayer(Player player, long value) {
         player.getPersistentDataContainer().set(gravedKey, PersistentDataType.LONG, value);
     }
-    private static void setGravedPlayer(Player player) {
+    public static void setGravedPlayer(Player player) {
         setGravedPlayer(player, System.currentTimeMillis());
     }
-    private static long getGravedPlayer(Player player) {
+    public static long getGravedPlayer(Player player) {
         return player.getPersistentDataContainer().getOrDefault(gravedKey, PersistentDataType.LONG, 0L);
     }
-    private static void unsetGravedPlayer(Player player) {
+    public static void unsetGravedPlayer(Player player) {
         player.getPersistentDataContainer().remove(gravedKey);
     }
-    private static boolean isGravedPlayer(Player player) {
+    public static boolean isGravedPlayer(Player player) {
         return player.getPersistentDataContainer().has(gravedKey);
     }
 
-    private static void setGravedLogoutPlayer(Player player) {
+    public static void setGravedLogoutPlayer(Player player) {
         player.getPersistentDataContainer().set(logoutKey, PersistentDataType.BOOLEAN, true);
     }
-    private static void unsetGravedLogoutPlayer(Player player) {
+    public static void unsetGravedLogoutPlayer(Player player) {
         player.getPersistentDataContainer().remove(logoutKey);
     }
-    private static boolean isGravedLogoutPlayer(Player player) {
+    public static boolean isGravedLogoutPlayer(Player player) {
         return player.getPersistentDataContainer().has(logoutKey);
     }
 

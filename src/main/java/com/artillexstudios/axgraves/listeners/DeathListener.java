@@ -1,5 +1,6 @@
 package com.artillexstudios.axgraves.listeners;
 
+import static com.artillexstudios.axgraves.AxGraves.CONFIG;
 import com.artillexstudios.axapi.utils.logging.LogUtils;
 import com.artillexstudios.axgraves.AxGraves;
 import com.artillexstudios.axgraves.api.events.GravePreSpawnEvent;
@@ -9,27 +10,17 @@ import com.artillexstudios.axgraves.grave.SpawnedGraves;
 import com.artillexstudios.axgraves.utils.ExperienceUtils;
 import com.artillexstudios.axgraves.utils.GraveLockUtils;
 import com.artillexstudios.axgraves.utils.TownyUtils;
-
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.EventExecutor;
-
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import static com.artillexstudios.axgraves.AxGraves.CONFIG;
 
 public class DeathListener implements Listener {
     private static List<String> disabledWorlds;
@@ -71,13 +62,8 @@ public class DeathListener implements Listener {
             }
         };
 
-        AxGraves.getInstance().getServer().getPluginManager().registerEvent(
-                PlayerDeathEvent.class,
-                this,
-                eventPriority,
-                executor,
-                AxGraves.getInstance(),
-                true);
+        AxGraves.getInstance().getServer().getPluginManager().registerEvent(PlayerDeathEvent.class, this, eventPriority,
+                executor, AxGraves.getInstance(), true);
     }
 
     public void onDeath(PlayerDeathEvent event) {
@@ -109,19 +95,21 @@ public class DeathListener implements Listener {
                         killer.getName(), isSiegeActive(player), isNearIsTownSpawn(player));
         }
         boolean isRealDeath = isRealDeath(player, debug);
-        File graveFile = new File(AxGraves.getInstance().getDataFolder(), "graved-players.yml");
-        FileConfiguration gravedPlayers = YamlConfiguration.loadConfiguration(graveFile);
-        String playerUuid = player.getUniqueId().toString();
+        // File graveFile = new File(AxGraves.getInstance().getDataFolder(), "graved-players.yml");
+        // FileConfiguration gravedPlayers = YamlConfiguration.loadConfiguration(graveFile);
+        // String playerUuid = player.getUniqueId().toString();
         if (isRealDeath) {
             if (debug)
                 LogUtils.debug("[{}] is a real death", player.getName());
-            gravedPlayers.set(playerUuid, null);
-            try {
-                gravedPlayers.save(graveFile);
-            } catch (IOException e) {
-                LogUtils.error("Failed to save graved-players.yml", e);
-            }
-            long deathTime = gravedPlayers.getLong(playerUuid);
+            // gravedPlayers.set(playerUuid, null);
+            GraveLockUtils.unsetGravedPlayer(player);
+            // try {
+            // gravedPlayers.save(graveFile);
+            // } catch (IOException e) {
+            // LogUtils.error("Failed to save graved-players.yml", e);
+            // }
+            // long deathTime = gravedPlayers.getLong(playerUuid);
+            long deathTime = GraveLockUtils.getGravedPlayer(player);
             if (debug)
                 LogUtils.debug("[{}] death recorded at: {}", player.getName(), new java.util.Date(deathTime));
 
@@ -131,15 +119,17 @@ public class DeathListener implements Listener {
 
         if (stayOnGrave) {
             long currentTime = System.currentTimeMillis();
-            gravedPlayers.set(playerUuid, currentTime);
+            // gravedPlayers.set(playerUuid, currentTime);
+            GraveLockUtils.setGravedPlayer(player, currentTime);
 
-            try {
-                gravedPlayers.save(graveFile);
-            } catch (IOException e) {
-                LogUtils.error("Failed to save graved-players.yml", e);
-            }
+            // try {
+            // gravedPlayers.save(graveFile);
+            // } catch (IOException e) {
+            // LogUtils.error("Failed to save graved-players.yml", e);
+            // }
             if (player.getVehicle() != null) {
-                player.getVehicle().getScheduler().run(AxGraves.getInstance(), scheduledTask -> player.getVehicle().removePassenger(player), null);
+                player.getVehicle().getScheduler().run(AxGraves.getInstance(),
+                        scheduledTask -> player.getVehicle().removePassenger(player), null);
             }
             Bukkit.getServer().sendMessage(event.deathMessage());
             event.setCancelled(true);
@@ -283,15 +273,11 @@ public class DeathListener implements Listener {
     }
 
     private boolean isRealDeath(Player player, boolean debug) {
-        File graveFile = new File(AxGraves.getInstance().getDataFolder(), "graved-players.yml");
-        FileConfiguration gravedPlayers = YamlConfiguration.loadConfiguration(graveFile);
-        String playerUuid = player.getUniqueId().toString();
-
-        if (gravedPlayers.contains(playerUuid)) {
-            return true;
-        } else {
-            return false;
-        }
+        // File graveFile = new File(AxGraves.getInstance().getDataFolder(), "graved-players.yml");
+        // FileConfiguration gravedPlayers = YamlConfiguration.loadConfiguration(graveFile);
+        // String playerUuid = player.getUniqueId().toString();
+        return GraveLockUtils.isGravedPlayer(player);
+        // return gravedPlayers.contains(playerUuid);
     }
 
     private double findSafeY(Location location) {
@@ -311,8 +297,7 @@ public class DeathListener implements Listener {
 
         if (startInBlock) {
             while (y < maxHeight && maxAttempts-- > 0) {
-                String blockType = location.getWorld().getBlockAt(blockX, (int) Math.floor(y), blockZ)
-                        .getType().name();
+                String blockType = location.getWorld().getBlockAt(blockX, (int) Math.floor(y), blockZ).getType().name();
                 if (safeBlocks.contains(blockType)) {
                     return Math.floor(y);
                 }
@@ -320,8 +305,7 @@ public class DeathListener implements Listener {
             }
         } else {
             while (y > minHeight && maxAttempts-- > 0) {
-                String blockType = location.getWorld().getBlockAt(blockX, (int) Math.floor(y), blockZ)
-                        .getType().name();
+                String blockType = location.getWorld().getBlockAt(blockX, (int) Math.floor(y), blockZ).getType().name();
                 if (!safeBlocks.contains(blockType)) {
                     return Math.floor(y + 1);
                 }
