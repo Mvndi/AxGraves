@@ -95,8 +95,6 @@ public class DeathListener implements Listener {
             if (debug)
                 LogUtils.debug("[{}] is a real death", player.getName());
 
-            GraveLockUtils.unsetGravedPlayer(player);
-
             long deathTime = GraveLockUtils.getGravedPlayer(player);
             if (debug)
                 LogUtils.debug("[{}] death recorded at: {}", player.getName(), new java.util.Date(deathTime));
