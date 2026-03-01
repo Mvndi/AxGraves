@@ -56,15 +56,6 @@ public class GraveLockListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onPickup(PlayerPickItemEvent event) {
-        Player player = event.getPlayer();
-        if (GraveLockUtils.isLocked(player)) {
-            event.setCancelled(true);
-            sendDeniedActionMessage(player, "item-pickup");
-        }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPickupXp(PlayerPickupExperienceEvent event) {
         Player player = event.getPlayer();
         if (GraveLockUtils.isLocked(player)) {
