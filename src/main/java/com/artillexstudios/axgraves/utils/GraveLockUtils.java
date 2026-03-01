@@ -47,14 +47,7 @@ public final class GraveLockUtils {
     public static void removeGraveLockState(Player player) {
         unsetGravedPlayer(player);
         unsetGravedLogoutPlayer(player);
-        // synchronized (LOCK) {
-        // FileConfiguration gravedPlayers = loadStorage();
-        // FileConfiguration gravedLogoutPlayers = loadLogoutStorage();
 
-        // String playerUuid = player.getUniqueId().toString();
-        // gravedPlayers.set(playerUuid, null);
-        // gravedLogoutPlayers.set(playerUuid, null);
-        // }
         for (Player other : Bukkit.getOnlinePlayers()) {
             if (!other.equals(player)) {
                 Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), other.getLocation(), () -> {
@@ -71,89 +64,71 @@ public final class GraveLockUtils {
         });
     }
 
-    // private static final String RESPAWN_STORAGE_FILE = "graved-players.yml";
-    // private static final String LOGOUT_STORAGE_FILE = "logged-out-players.yml";
-
     private static final long DEFAULT_MOVE_LOCK_SECONDS = 30L;
     private static final long REJOIN_PENDING_SENTINEL = -1L;
-    private static final Object LOCK = new Object();
     private static ScheduledFuture<?> cleanupTask;
 
     private GraveLockUtils() {}
 
     public static boolean isLocked(Player player) {
-        synchronized (LOCK) {
-            // FileConfiguration gravedPlayers = loadStorage();
-            // String playerUuid = player.getUniqueId().toString();
-            long now = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
 
-            if (!isGravedPlayer(player)) {
-                // if (!gravedPlayers.contains(playerUuid)) {
-                return false;
-            }
+        if (!isGravedPlayer(player)) {
+            return false;
+        }
 
-            // long storedValue = gravedPlayers.getLong(playerUuid, 0L);
-            long storedValue = getGravedPlayer(player);
-            if (storedValue == 0L) {
-                // gravedPlayers.set(playerUuid, null);
-                unsetGravedPlayer(player);
-                // saveStorage(gravedPlayers);
-                return false;
-            }
+        long storedValue = getGravedPlayer(player);
+        if (storedValue == 0L) {
+            unsetGravedPlayer(player);
+            return false;
+        }
 
-            if (storedValue == REJOIN_PENDING_SENTINEL) {
+        if (storedValue == REJOIN_PENDING_SENTINEL) {
+            return true;
+        }
+
+        if (storedValue < 0L) {
+            long rejoinUnlockAt = -storedValue;
+            if (now < rejoinUnlockAt) {
                 return true;
-            }
-
-            if (storedValue < 0L) {
-                long rejoinUnlockAt = -storedValue;
-                if (now < rejoinUnlockAt) {
-                    return true;
-                }
-
-                realDeath(player);
-                return true;
-            }
-
-            if (now - storedValue < getRespawnLockSeconds(player)) {
-                return true;
-
             }
 
             realDeath(player);
             return true;
         }
+
+        if (now - storedValue < getRespawnLockSeconds(player)) {
+            return true;
+
+        }
+
+        realDeath(player);
+        return true;
     }
 
     public static long getRemainingLockMillis(Player player) {
-        synchronized (LOCK) {
-            // FileConfiguration gravedPlayers = loadStorage();
-            // String playerUuid = player.getUniqueId().toString();
-            long now = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
 
-            // if (!gravedPlayers.contains(playerUuid)) {
-            if (!isGravedPlayer(player)) {
-                return 0L;
-            }
-
-            // long storedValue = gravedPlayers.getLong(playerUuid, 0L);
-            long storedValue = getGravedPlayer(player);
-            if (storedValue == 0L) {
-                return 0L;
-            }
-
-            if (storedValue == REJOIN_PENDING_SENTINEL) {
-                return getMoveTownLockMillis();
-            }
-
-            if (storedValue < 0L) {
-                return Math.max(0L, (-storedValue) - now);
-            }
-
-            long remaining = getRespawnLockSeconds(player) - (now - storedValue);
-
-            return Math.max(0L, remaining);
+        if (!isGravedPlayer(player)) {
+            return 0L;
         }
+
+        long storedValue = getGravedPlayer(player);
+        if (storedValue == 0L) {
+            return 0L;
+        }
+
+        if (storedValue == REJOIN_PENDING_SENTINEL) {
+            return getMoveTownLockMillis();
+        }
+
+        if (storedValue < 0L) {
+            return Math.max(0L, (-storedValue) - now);
+        }
+
+        long remaining = getRespawnLockSeconds(player) - (now - storedValue);
+
+        return Math.max(0L, remaining);
     }
 
     public static void showFalseDeathTitle(Player player) {
@@ -208,153 +183,108 @@ public final class GraveLockUtils {
     }
 
     public static void onPlayerJoin(Player player) {
-        synchronized (LOCK) {
+        if (getRemainingLockMillis(player) - System.currentTimeMillis() <= 0) {
+            removeGraveLockState(player);
+        } else if (isGravedLogoutPlayer(player)) {
+            setGravedPlayer(player);
+            unsetGravedLogoutPlayer(player);
 
-            // String playerUuid = player.getUniqueId().toString();
-
-            if (getRemainingLockMillis(player) - System.currentTimeMillis() <= 0) {
-                removeGraveLockState(player);
-            } else if (isGravedLogoutPlayer(player)) {
-                setGravedPlayer(player);
-                unsetGravedLogoutPlayer(player);
-
-                applyGraveLockState(player);
-                showFalseDeathTitle(player);
-            }
+            applyGraveLockState(player);
+            showFalseDeathTitle(player);
         }
     }
 
     public static void onPlayerQuit(Player player) {
         LogUtils.info("Player {} is logging out, checking for grave lock", player.getName());
-        synchronized (LOCK) {
-            // FileConfiguration gravedPlayers = loadStorage();
-            // String playerUuid = player.getUniqueId().toString();
 
-            // if (!gravedPlayers.contains(playerUuid)) {
-            if (!isGravedPlayer(player)) {
-                LogUtils.info("Player {} does not have an active grave lock, no action needed", player.getName());
-                return;
-            }
-
-            // FileConfiguration logoutPlayers = loadLogoutStorage();
-            // logoutPlayers.set(playerUuid, System.currentTimeMillis());
-            // saveLogoutStorage(logoutPlayers);
-            setGravedLogoutPlayer(player);
-
-            player.setHealth(0.0D);
-            LogUtils.info("Player {} logged out while locked, applying death", player.getName());
+        if (!isGravedPlayer(player)) {
+            LogUtils.info("Player {} does not have an active grave lock, no action needed", player.getName());
+            return;
         }
+
+        setGravedLogoutPlayer(player);
+
+        player.setHealth(0.0D);
+        LogUtils.info("Player {} logged out while locked, applying death", player.getName());
     }
 
     public static void startLockExpiryChecker() {
-        synchronized (LOCK) {
-            if (cleanupTask != null)
-                return;
-            cleanupTask = EXECUTOR.scheduleAtFixedRate(() -> {
-                try {
-                    cleanupExpiredLocks();
-                } catch (Exception exception) {
-                    LogUtils.error("failed to cleanup expired grave locks", exception);
-                }
-            }, 1, 1, TimeUnit.SECONDS);
-        }
+        if (cleanupTask != null)
+            return;
+        cleanupTask = EXECUTOR.scheduleAtFixedRate(() -> {
+            try {
+                cleanupExpiredLocks();
+            } catch (Exception exception) {
+                LogUtils.error("failed to cleanup expired grave locks", exception);
+            }
+        }, 1, 1, TimeUnit.SECONDS);
     }
 
     public static void stopLockExpiryChecker() {
-        synchronized (LOCK) {
-            if (cleanupTask == null)
-                return;
-            cleanupTask.cancel(true);
-            cleanupTask = null;
-        }
+        if (cleanupTask == null)
+            return;
+        cleanupTask.cancel(true);
+        cleanupTask = null;
     }
 
     private static void cleanupExpiredLocks() {
-        synchronized (LOCK) {
-            // FileConfiguration gravedPlayers = loadStorage();
-            long now = System.currentTimeMillis();
-            // boolean changed = false;
+        long now = System.currentTimeMillis();
 
-            // for (String uuid : gravedPlayers.getKeys(false)) {
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                // long storedValue = gravedPlayers.getLong(uuid, 0L);
-                long storedValue = getGravedPlayer(player);
-                if (storedValue == 0L) {
-                    // gravedPlayers.set(uuid, null);
-                    unsetGravedPlayer(player);
-                    // changed = true;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            long storedValue = getGravedPlayer(player);
+            if (storedValue == 0L) {
+                unsetGravedPlayer(player);
+                continue;
+            }
+
+            if (storedValue == REJOIN_PENDING_SENTINEL) {
+
+                if (player == null || !player.isOnline()) {
                     continue;
                 }
 
-                if (storedValue == REJOIN_PENDING_SENTINEL) {
-                    // Player player = getOnlinePlayer(uuid);
-
-                    if (player == null || !player.isOnline()) {
-                        continue;
-                    }
-
-                    showFalseDeathTitle(player);
-                    long rejoinMillis = getMoveTownLockMillis();
-                    if (rejoinMillis <= 0L) {
-                        realDeath(player);
-                        continue;
-                    }
-
-                    long rejoinUnlockAt = now + rejoinMillis;
-                    // gravedPlayers.set(uuid, -rejoinUnlockAt);
-                    // changed = true;
-                    setGravedPlayer(player, -rejoinUnlockAt);
-                    continue;
-                }
-
-                if (storedValue < 0L) {
-                    long rejoinUnlockAt = -storedValue;
-                    if (now < rejoinUnlockAt) {
-                        continue;
-                    }
-                    // Player player = getOnlinePlayer(uuid);
-
-                    if (player == null || !player.isOnline()) {
-                        continue;
-                    }
-
+                showFalseDeathTitle(player);
+                long rejoinMillis = getMoveTownLockMillis();
+                if (rejoinMillis <= 0L) {
                     realDeath(player);
                     continue;
                 }
-                // Player player = getOnlinePlayer(uuid);
 
-                if (player == null || !player.isOnline()) {
+                long rejoinUnlockAt = now + rejoinMillis;
+                setGravedPlayer(player, -rejoinUnlockAt);
+                continue;
+            }
+
+            if (storedValue < 0L) {
+                long rejoinUnlockAt = -storedValue;
+                if (now < rejoinUnlockAt) {
                     continue;
                 }
 
-                if (now - storedValue < getRespawnLockSeconds(player)) {
-                    continue;
-                }
-
                 if (player == null || !player.isOnline()) {
-                    // gravedPlayers.set(uuid, REJOIN_PENDING_SENTINEL);
-                    // changed = true;
-                    setGravedPlayer(player, REJOIN_PENDING_SENTINEL);
                     continue;
                 }
 
                 realDeath(player);
+                continue;
             }
 
-            // if (changed) {
-            // saveStorage(gravedPlayers);
-            // }
+            if (player == null || !player.isOnline()) {
+                continue;
+            }
+
+            if (now - storedValue < getRespawnLockSeconds(player)) {
+                continue;
+            }
+
+            if (player == null || !player.isOnline()) {
+                setGravedPlayer(player, REJOIN_PENDING_SENTINEL);
+                continue;
+            }
+
+            realDeath(player);
         }
     }
-
-    // private static Player getOnlinePlayer(String uuidString) {
-    // try {
-    // UUID uuid = UUID.fromString(uuidString);
-    // return Bukkit.getPlayer(uuid);
-    // } catch (IllegalArgumentException ignored) {
-    // return null;
-    // }
-    // }
 
     private static void realDeath(Player player) {
         if (!player.isOnline() || player.isDead()) {
@@ -367,52 +297,15 @@ public final class GraveLockUtils {
             }
             removeGraveLockState(player);
 
-            // UUID uuid = player.getUniqueId();
-            // FileConfiguration gravedLogoutPlayers = loadLogoutStorage();
-            // if (!gravedLogoutPlayers.contains(uuid.toString())) {
             if (!isGravedLogoutPlayer(player)) {
                 player.setHealth(0.0D);
             } else {
-                // FileConfiguration gravedPlayers = loadStorage();
-                // gravedPlayers.set(uuid.toString(), null);
-                // gravedLogoutPlayers.set(uuid.toString(), null);
                 unsetGravedPlayer(player);
                 unsetGravedLogoutPlayer(player);
-                // saveStorage(gravedPlayers);
-                // saveLogoutStorage(gravedLogoutPlayers);
             }
         });
         removeGraveLockState(player);
     }
-
-    // private static FileConfiguration loadStorage() {
-    // return YamlConfiguration.loadConfiguration(
-    // new File(AxGraves.getInstance().getDataFolder(), RESPAWN_STORAGE_FILE));
-    // }
-
-    // private static FileConfiguration loadLogoutStorage() {
-    // return YamlConfiguration.loadConfiguration(
-    // new File(AxGraves.getInstance().getDataFolder(), LOGOUT_STORAGE_FILE));
-    // }
-
-    // private static void saveLogoutStorage(FileConfiguration config) {
-    // File file = new File(AxGraves.getInstance().getDataFolder(), LOGOUT_STORAGE_FILE);
-    // try {
-    // config.save(file);
-    // } catch (IOException exception) {
-    // LogUtils.error("Failed to save {}", LOGOUT_STORAGE_FILE, exception);
-    // }
-    // }
-
-    // private static void saveStorage(FileConfiguration config) {
-    // File file = new File(AxGraves.getInstance().getDataFolder(),
-    // RESPAWN_STORAGE_FILE);
-    // try {
-    // config.save(file);
-    // } catch (IOException exception) {
-    // LogUtils.error("Failed to save {}", RESPAWN_STORAGE_FILE, exception);
-    // }
-    // }
 
 
     public static void setGravedPlayer(Player player, long value) {
