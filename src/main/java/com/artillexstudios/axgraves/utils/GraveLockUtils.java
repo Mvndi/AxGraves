@@ -40,6 +40,7 @@ public final class GraveLockUtils {
             player.setInvisible(true);
             player.setAllowFlight(true);
             player.setFlying(true);
+            player.setCanPickupItems(false);
             vanishedPlayers.add(player.getUniqueId());
         });
     }
@@ -60,6 +61,7 @@ public final class GraveLockUtils {
             player.setInvisible(false);
             player.setAllowFlight(false);
             player.setFlying(false);
+            player.setCanPickupItems(true);
             vanishedPlayers.remove(player.getUniqueId());
         });
     }
