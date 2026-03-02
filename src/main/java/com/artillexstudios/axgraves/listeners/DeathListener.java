@@ -10,9 +10,9 @@ import com.artillexstudios.axgraves.grave.SpawnedGraves;
 import com.artillexstudios.axgraves.utils.ExperienceUtils;
 import com.artillexstudios.axgraves.utils.GraveLockUtils;
 import com.artillexstudios.axgraves.utils.TownyUtils;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+
+import java.util.*;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -25,6 +25,7 @@ import org.bukkit.plugin.EventExecutor;
 public class DeathListener implements Listener {
     private static List<String> disabledWorlds;
     private static List<String> blacklistedDeathCauses;
+    private static final Set<UUID> gravedPlayers = new HashSet<>();
     private static boolean overrideKeepInventory;
     private static boolean overrideKeepLevel;
     private static boolean storeItems;
@@ -70,7 +71,7 @@ public class DeathListener implements Listener {
 
         boolean stayOnGrave = true;
 
-        if (killer == null || !(killer instanceof Player)) {
+        if (!(killer instanceof Player)) {
             if (debug)
                 LogUtils.debug("[{}] killer is not a player", player.getName());
             stayOnGrave = false;
@@ -92,6 +93,7 @@ public class DeathListener implements Listener {
                         killer.getName(), isSiegeActive(player), isNearIsTownSpawn(player));
         }
         if (isRealDeath(player)) {
+            gravedPlayers.remove(player.getUniqueId());
             if (debug)
                 LogUtils.debug("[{}] is a real death", player.getName());
 
@@ -117,6 +119,7 @@ public class DeathListener implements Listener {
             // Hide and protect player instead of spectator mode
             GraveLockUtils.applyGraveLockState(player);
             GraveLockUtils.showFalseDeathTitle(player);
+            gravedPlayers.add(player.getUniqueId());
         }
         if (debug)
             LogUtils.debug("[{}] spawning grave", player.getName());
@@ -253,7 +256,7 @@ public class DeathListener implements Listener {
     }
 
     private boolean isRealDeath(Player player) {
-        return GraveLockUtils.isGravedPlayer(player);
+        return gravedPlayers.contains(player.getUniqueId());
     }
 
     private double findSafeY(Location location) {
