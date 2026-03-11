@@ -1,6 +1,7 @@
 # User-specific stuff
 .idea/
 .run
+bin/
 
 *.iml
 *.ipr
