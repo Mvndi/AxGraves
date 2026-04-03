@@ -99,7 +99,7 @@ public class SpawnedGraves {
                 ItemStack[] items = Serializers.ITEM_ARRAY.deserialize(Base64.getDecoder().decode(itStr));
                 int xp = obj.get("xp").getAsInt();
                 long date = obj.get("date").getAsLong();
-                addGrave(new Grave(location, owner, Arrays.asList(items), xp, date));
+                addGrave(new Grave(location, owner, Arrays.asList(items), xp, date, null));
             }
         } catch (Exception ex) {
             ex.printStackTrace();

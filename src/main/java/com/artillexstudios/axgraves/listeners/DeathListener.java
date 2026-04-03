@@ -245,7 +245,19 @@ public class DeathListener implements Listener {
                 LogUtils.debug("[{}] return: drops empty and xp is 0", player.getName());
             return;
         }
-        Grave grave = new Grave(location, player, drops, xp, System.currentTimeMillis());
+
+        // Snapshot player equipment for mannequin display
+        org.bukkit.inventory.PlayerInventory inv = player.getInventory();
+        ItemStack[] equipment = new ItemStack[] {
+                inv.getHelmet() != null ? inv.getHelmet().clone() : null,
+                inv.getChestplate() != null ? inv.getChestplate().clone() : null,
+                inv.getLeggings() != null ? inv.getLeggings().clone() : null,
+                inv.getBoots() != null ? inv.getBoots().clone() : null,
+                inv.getItemInMainHand().getType().isAir() ? null : inv.getItemInMainHand().clone(),
+                inv.getItemInOffHand().getType().isAir() ? null : inv.getItemInOffHand().clone()
+        };
+
+        Grave grave = new Grave(location, player, drops, xp, System.currentTimeMillis(), equipment);
         SpawnedGraves.addGrave(grave);
         if (debug)
             LogUtils.debug("[{}] created and added grave", player.getName());
