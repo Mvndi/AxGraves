@@ -4,17 +4,16 @@ import com.artillexstudios.axapi.hologram.Hologram;
 import com.artillexstudios.axapi.hologram.HologramType;
 import com.artillexstudios.axapi.hologram.HologramTypes;
 import com.artillexstudios.axapi.hologram.page.HologramPage;
-import com.artillexstudios.axapi.items.WrappedItemStack;
 import com.artillexstudios.axapi.libs.boostedyaml.block.implementation.Section;
+import com.artillexstudios.axapi.items.WrappedItemStack;
 import com.artillexstudios.axapi.nms.NMSHandlers;
-import com.artillexstudios.axapi.packet.wrapper.serverbound.ServerboundInteractWrapper;
 import com.artillexstudios.axapi.packetentity.PacketEntity;
 import com.artillexstudios.axapi.packetentity.meta.entity.ArmorStandMeta;
 import com.artillexstudios.axapi.packetentity.meta.entity.DisplayMeta;
 import com.artillexstudios.axapi.packetentity.meta.entity.TextDisplayMeta;
 import com.artillexstudios.axapi.scheduler.Scheduler;
-import com.artillexstudios.axapi.utils.EquipmentSlot;
 import com.artillexstudios.axapi.utils.StringUtils;
+import com.artillexstudios.axgraves.AxGraves;
 import com.artillexstudios.axgraves.api.events.GraveInteractEvent;
 import com.artillexstudios.axgraves.api.events.GraveOpenEvent;
 import com.artillexstudios.axgraves.utils.BlacklistUtils;
@@ -31,7 +30,10 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.ExperienceOrb;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Item;
+import org.bukkit.entity.Mannequin;
+import io.papermc.paper.datacomponent.item.ResolvableProfile;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -56,11 +58,12 @@ public class Grave {
     private final String playerName;
     private final Inventory gui;
     private int storedXP;
-    private final PacketEntity entity;
+    private final Mannequin entity;
+    private final PacketEntity graveModel;
     private Hologram hologram;
     private boolean removed = false;
 
-    public Grave(Location loc, @NotNull OfflinePlayer offlinePlayer, @NotNull List<ItemStack> items, int storedXP, long date) {
+    public Grave(Location loc, @NotNull OfflinePlayer offlinePlayer, @NotNull List<ItemStack> items, int storedXP, long date, @Nullable ItemStack[] equipment) {
         items = new ArrayList<>(items);
         items.removeIf(it -> {
             if (it == null) return true;
@@ -91,26 +94,38 @@ public class Grave {
         }
         items.forEach(gui::addItem);
 
-        entity = NMSHandlers.getNmsHandler().createEntity(EntityType.ARMOR_STAND, location.clone().add(0, 1 + CONFIG.getFloat("head-height", -1.2f), 0));
-//        entity.setItem(EquipmentSlot.HELMET, WrappedItemStack.wrap(Utils.getPlayerHead(offlinePlayer)));
-        entity.setItem(EquipmentSlot.HELMET, WrappedItemStack.wrap(Utils.getGraveItem())); // mvndicraft - use custom gravestone item
-        final ArmorStandMeta meta = (ArmorStandMeta) entity.meta();
-        meta.invisible(true);
-        meta.setNoBasePlate(false);
-        entity.spawn();
+        float yaw = CONFIG.getBoolean("rotate-head-360", true)
+                ? location.getYaw()
+                : LocationUtils.getNearestDirection(location.getYaw());
 
-        if (CONFIG.getBoolean("rotate-head-360", true)) {
-            entity.location().setYaw(location.getYaw());
-            entity.teleport(entity.location());
-        } else {
-            entity.location().setYaw(LocationUtils.getNearestDirection(location.getYaw()));
-            entity.teleport(entity.location());
-        }
+        graveModel = NMSHandlers.getNmsHandler().createEntity(EntityType.ARMOR_STAND, location.clone().add(0, 1 + CONFIG.getFloat("head-height", -1.2f), 0));
+        graveModel.setItem(com.artillexstudios.axapi.utils.EquipmentSlot.HELMET, WrappedItemStack.wrap(Utils.getGraveItem()));
+        final ArmorStandMeta graveModelMeta = (ArmorStandMeta) graveModel.meta();
+        graveModelMeta.invisible(true);
+        graveModelMeta.setNoBasePlate(false);
+        graveModel.location().setYaw(yaw);
+        graveModel.teleport(graveModel.location());
+        graveModel.spawn();
 
-        entity.onInteract(event -> {
-            Scheduler.get().runAt(location, task -> {
-                interact(event.getPlayer(), event.getHand());
-            });
+        entity = location.getWorld().spawn(location, Mannequin.class, mannequin -> {
+            mannequin.setProfile(ResolvableProfile.resolvableProfile(offlinePlayer.getPlayerProfile()));
+            mannequin.setInvulnerable(true);
+            mannequin.setGravity(false);
+            mannequin.setSilent(true);
+            mannequin.setAI(false);
+            mannequin.setCollidable(false);
+            mannequin.setRotation(yaw, 0);
+            mannequin.setPersistent(false);
+
+            if (equipment != null) {
+                org.bukkit.inventory.EntityEquipment eq = mannequin.getEquipment();
+                if (equipment.length > 0 && equipment[0] != null) eq.setHelmet(equipment[0].clone());
+                if (equipment.length > 1 && equipment[1] != null) eq.setChestplate(equipment[1].clone());
+                if (equipment.length > 2 && equipment[2] != null) eq.setLeggings(equipment[2].clone());
+                if (equipment.length > 3 && equipment[3] != null) eq.setBoots(equipment[3].clone());
+                if (equipment.length > 4 && equipment[4] != null) eq.setItemInMainHand(equipment[4].clone());
+                if (equipment.length > 5 && equipment[5] != null) eq.setItemInOffHand(equipment[5].clone());
+            }
         });
 
         updateHologram();
@@ -129,12 +144,17 @@ public class Grave {
         }
 
         if (CONFIG.getBoolean("auto-rotation.enabled", false)) {
-            entity.location().setYaw(entity.location().getYaw() + CONFIG.getFloat("auto-rotation.speed", 10f));
-            entity.teleport(entity.location());
+            float speed = CONFIG.getFloat("auto-rotation.speed", 10f);
+            Location loc = entity.getLocation();
+            loc.setYaw(loc.getYaw() + speed);
+            entity.setRotation(loc.getYaw(), 0);
+
+            graveModel.location().setYaw(graveModel.location().getYaw() + speed);
+            graveModel.teleport(graveModel.location());
         }
     }
 
-    public void interact(@NotNull Player opener, ServerboundInteractWrapper.InteractionHand slot) {
+    public void interact(@NotNull Player opener, @Nullable EquipmentSlot slot) {
         if (CONFIG.getBoolean("interact-only-own", false) && !opener.getUniqueId().equals(player.getUniqueId()) && !opener.hasPermission("axgraves.admin")) {
             MESSAGEUTILS.sendLang(opener, "interact.not-your-grave");
             return;
@@ -149,7 +169,7 @@ public class Grave {
             this.storedXP = 0;
         }
 
-        if (slot != null && slot.equals(ServerboundInteractWrapper.InteractionHand.MAIN_HAND) && opener.isSneaking()) {
+        if (slot != null && slot.equals(EquipmentSlot.HAND) && opener.isSneaking()) {
             if (opener.getGameMode() == GameMode.SPECTATOR) return;
             if (!CONFIG.getBoolean("enable-instant-pickup", true)) return;
             if (CONFIG.getBoolean("instant-pickup-only-own", false) && !opener.getUniqueId().equals(player.getUniqueId())) return;
@@ -258,6 +278,7 @@ public class Grave {
             removeInventory();
 
             if (entity != null) entity.remove();
+            if (graveModel != null) graveModel.remove();
             if (hologram != null) hologram.remove();
         };
 
@@ -315,7 +336,7 @@ public class Grave {
         return storedXP;
     }
 
-    public PacketEntity getEntity() {
+    public Mannequin getEntity() {
         return entity;
     }
 
