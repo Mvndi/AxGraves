@@ -71,7 +71,7 @@ public class DeathListener implements Listener {
 
         boolean stayOnGrave = true;
 
-        if (!(killer instanceof Player)) {
+        if (killer == null) {
             if (debug)
                 LogUtils.debug("[{}] killer is not a player", player.getName());
             stayOnGrave = false;
@@ -87,10 +87,9 @@ public class DeathListener implements Listener {
             if (debug)
                 LogUtils.debug("[{}] move normal lock is disabled", player.getName());
             stayOnGrave = false;
-        } else {
-            if (debug)
-                LogUtils.debug("[{}] killer: {}, siege active: {}, near town spawn: {}", player.getName(),
-                        killer.getName(), isSiegeActive(player), isNearIsTownSpawn(player));
+        } else if (debug) {
+            LogUtils.debug("[{}] killer: {}, siege active: {}, near town spawn: {}", player.getName(),
+                    killer.getName(), isSiegeActive(player), isNearIsTownSpawn(player));
         }
         if (isRealDeath(player)) {
             gravedPlayers.remove(player.getUniqueId());
