@@ -101,8 +101,8 @@ public final class AxGraves extends AxPlugin {
         for (Grave grave : SpawnedGraves.getGraves()) {
             if (!CONFIG.getBoolean("save-graves.enabled", true))
                 grave.remove();
-            if (grave.getEntity() != null)
-                grave.getEntity().remove();
+            if (grave.getMannequin() != null)
+                grave.getMannequin().remove();
             if (grave.getHologram() != null)
                 grave.getHologram().remove();
         }

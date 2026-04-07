@@ -9,7 +9,6 @@ import com.artillexstudios.axapi.packetentity.meta.entity.DisplayMeta;
 import com.artillexstudios.axapi.packetentity.meta.entity.TextDisplayMeta;
 import com.artillexstudios.axapi.scheduler.Scheduler;
 import com.artillexstudios.axapi.utils.StringUtils;
-import com.artillexstudios.axgraves.AxGraves;
 import com.artillexstudios.axgraves.api.events.GraveInteractEvent;
 import com.artillexstudios.axgraves.api.events.GraveOpenEvent;
 import com.artillexstudios.axgraves.utils.BlacklistUtils;
@@ -22,14 +21,8 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.ExperienceOrb;
-import org.bukkit.entity.HumanEntity;
-import org.bukkit.entity.Item;
-import org.bukkit.entity.Mannequin;
+import org.bukkit.entity.*;
 import io.papermc.paper.datacomponent.item.ResolvableProfile;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Pose;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -55,7 +48,8 @@ public class Grave {
     private final String playerName;
     private final Inventory gui;
     private int storedXP;
-    private final Mannequin entity;
+    private final Mannequin mannequin;
+    private final Interaction interaction;
     private Hologram hologram;
     private boolean removed = false;
 
@@ -95,19 +89,33 @@ public class Grave {
                 : LocationUtils.getNearestDirection(location.getYaw());
 
         Location spawnLoc = location.clone().add(0, 0.5, 0);
-        entity = location.getWorld().spawn(spawnLoc, Mannequin.class, mannequin -> {
-            mannequin.setPose(Pose.SLEEPING);
-            mannequin.setProfile(ResolvableProfile.resolvableProfile(offlinePlayer.getPlayerProfile()));
-            mannequin.setInvulnerable(true);
-            mannequin.setGravity(false);
-            mannequin.setSilent(true);
-            mannequin.setAI(false);
-            mannequin.setCollidable(false);
-            mannequin.setRotation(yaw, 0);
-            mannequin.setPersistent(false);
+
+        float headYaw = 90 - yaw;
+        double rad = Math.toRadians(headYaw);
+        double dx = -Math.sin(rad);
+        double dz = Math.cos(rad);
+        Location interactionLoc = spawnLoc.clone().add(dx, 0, dz);
+
+        interaction = location.getWorld().spawn(interactionLoc, Interaction.class, interaction1 -> {
+            interaction1.setInteractionWidth(1.0f);
+            interaction1.setInteractionHeight(0.2f);
+            interaction1.setRotation(yaw, 0);
+            interaction1.setGravity(true);
+            interaction1.setPersistent(false);
+        });
+        mannequin = location.getWorld().spawn(spawnLoc, Mannequin.class, mannequin1 -> {
+            mannequin1.setPose(Pose.SLEEPING);
+            mannequin1.setProfile(ResolvableProfile.resolvableProfile(offlinePlayer.getPlayerProfile()));
+            mannequin1.setInvulnerable(true);
+            mannequin1.setGravity(false);
+            mannequin1.setSilent(true);
+            mannequin1.setAI(false);
+            mannequin1.setCollidable(false);
+            mannequin1.setRotation(yaw, 0);
+            mannequin1.setPersistent(false);
 
             if (equipment != null) {
-                org.bukkit.inventory.EntityEquipment eq = mannequin.getEquipment();
+                org.bukkit.inventory.EntityEquipment eq = mannequin1.getEquipment();
                 if (equipment.length > 0 && equipment[0] != null) eq.setHelmet(equipment[0].clone());
                 if (equipment.length > 1 && equipment[1] != null) eq.setChestplate(equipment[1].clone());
                 if (equipment.length > 2 && equipment[2] != null) eq.setLeggings(equipment[2].clone());
@@ -133,9 +141,9 @@ public class Grave {
         }
 
         if (CONFIG.getBoolean("auto-rotation.enabled", false)) {
-            Location loc = entity.getLocation();
+            Location loc = mannequin.getLocation();
             loc.setYaw(loc.getYaw() + CONFIG.getFloat("auto-rotation.speed", 10f));
-            entity.setRotation(loc.getYaw(), 0);
+            mannequin.setRotation(loc.getYaw(), 0);
         }
     }
 
@@ -262,7 +270,8 @@ public class Grave {
             SpawnedGraves.removeGrave(this);
             removeInventory();
 
-            if (entity != null) entity.remove();
+            if (interaction != null) interaction.remove();
+            if (mannequin != null) mannequin.remove();
             if (hologram != null) hologram.remove();
         };
 
@@ -320,8 +329,12 @@ public class Grave {
         return storedXP;
     }
 
-    public Mannequin getEntity() {
-        return entity;
+    public Interaction getInteraction() {
+        return interaction;
+    }
+
+    public Mannequin getMannequin() {
+        return mannequin;
     }
 
     public Hologram getHologram() {
