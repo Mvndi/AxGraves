@@ -2,7 +2,8 @@ package com.artillexstudios.axgraves.listeners;
 
 import com.artillexstudios.axgraves.grave.Grave;
 import com.artillexstudios.axgraves.grave.SpawnedGraves;
-import org.bukkit.entity.Mannequin;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -10,38 +11,44 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.inventory.EquipmentSlot;
+
+import java.util.Set;
 
 public class EntityInteractListener implements Listener {
+    private static final Set<EntityType> ALLOWED_TYPES = Set.of(EntityType.MANNEQUIN, EntityType.INTERACTION);
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onInteractAtEntity(PlayerInteractAtEntityEvent event) {
-        if (!(event.getRightClicked() instanceof Mannequin mannequin)) return;
-        handleInteract(event.getPlayer(), mannequin, event.getHand());
-        event.setCancelled(true);
+        event.setCancelled(handleInteract(event.getPlayer(), event.getRightClicked(), event.getHand()));
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onInteractEntity(PlayerInteractEntityEvent event) {
-        if (!(event.getRightClicked() instanceof Mannequin mannequin)) return;
-        handleInteract(event.getPlayer(), mannequin, event.getHand());
-        event.setCancelled(true);
+        event.setCancelled(handleInteract(event.getPlayer(), event.getRightClicked(), event.getHand()));
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onDamageEntity(EntityDamageByEntityEvent event) {
-        if (!(event.getDamager() instanceof Player player)) return;
-        if (!(event.getEntity() instanceof Mannequin mannequin)) return;
-        handleInteract(player, mannequin, null);
-        event.setCancelled(true);
+        if (!(event.getDamager() instanceof Player player))
+            return;
+        event.setCancelled(handleInteract(player, event.getEntity(), null));
     }
 
-    private void handleInteract(Player player, Mannequin mannequin, org.bukkit.inventory.EquipmentSlot hand) {
+    private boolean handleInteract(Player player, Entity entity, EquipmentSlot hand) {
+        if (!ALLOWED_TYPES.contains(entity.getType()))
+            return false;
+
         for (Grave grave : SpawnedGraves.getGraves()) {
-            if (grave.getEntity() == null) continue;
-            if (!grave.getEntity().getUniqueId().equals(mannequin.getUniqueId())) continue;
+            if (grave.getInteraction() == null && grave.getMannequin() == null)
+                continue;
+            if (!grave.getInteraction().getUniqueId().equals(entity.getUniqueId()) && !grave.getMannequin().getUniqueId().equals(entity.getUniqueId()))
+                continue;
 
             grave.interact(player, hand);
-            return;
+            return true;
         }
+
+        return false;
     }
 }
