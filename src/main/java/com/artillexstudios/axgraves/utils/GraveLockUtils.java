@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
@@ -59,8 +60,10 @@ public final class GraveLockUtils {
         Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), player.getLocation(), () -> {
             player.setInvulnerable(false);
             player.setInvisible(false);
-            player.setAllowFlight(false);
-            player.setFlying(false);
+            if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
+                player.setAllowFlight(false);
+                player.setFlying(false);
+            }
             player.setCanPickupItems(true);
             vanishedPlayers.remove(player.getUniqueId());
         });
