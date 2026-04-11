@@ -17,7 +17,6 @@ import com.artillexstudios.axgraves.grave.GravePlaceholders;
 import com.artillexstudios.axgraves.grave.SpawnedGraves;
 import com.artillexstudios.axgraves.listeners.DeathListener;
 import com.artillexstudios.axgraves.listeners.EntityInteractListener;
-import com.artillexstudios.axgraves.listeners.PlayerInteractListener;
 import com.artillexstudios.axgraves.listeners.GraveLockListener;
 import com.artillexstudios.axgraves.schedulers.SaveGraves;
 import com.artillexstudios.axgraves.schedulers.TickGraves;
@@ -68,7 +67,6 @@ public final class AxGraves extends AxPlugin {
         MESSAGEUTILS = new MessageUtils(LANG.getBackingDocument(), "prefix", CONFIG.getBackingDocument());
 
         new DeathListener();
-        getServer().getPluginManager().registerEvents(new PlayerInteractListener(), this);
         getServer().getPluginManager().registerEvents(new EntityInteractListener(), this);
         getServer().getPluginManager().registerEvents(new GraveLockListener(this), this);
 
@@ -101,8 +99,14 @@ public final class AxGraves extends AxPlugin {
         for (Grave grave : SpawnedGraves.getGraves()) {
             if (!CONFIG.getBoolean("save-graves.enabled", true))
                 grave.remove();
-            if (grave.getMannequin() != null)
-                grave.getMannequin().remove();
+            if (grave.getEntity() != null)
+                grave.getEntity().remove();
+            org.bukkit.entity.Interaction[] ixs = grave.getInteractions();
+            if (ixs != null) {
+                for (org.bukkit.entity.Interaction ix : ixs) {
+                    if (ix != null) ix.remove();
+                }
+            }
             if (grave.getHologram() != null)
                 grave.getHologram().remove();
         }

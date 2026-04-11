@@ -9,6 +9,7 @@ import com.artillexstudios.axapi.packetentity.meta.entity.DisplayMeta;
 import com.artillexstudios.axapi.packetentity.meta.entity.TextDisplayMeta;
 import com.artillexstudios.axapi.scheduler.Scheduler;
 import com.artillexstudios.axapi.utils.StringUtils;
+import com.artillexstudios.axgraves.AxGraves;
 import com.artillexstudios.axgraves.api.events.GraveInteractEvent;
 import com.artillexstudios.axgraves.api.events.GraveOpenEvent;
 import com.artillexstudios.axgraves.utils.BlacklistUtils;
@@ -21,8 +22,15 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.*;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.ExperienceOrb;
+import org.bukkit.entity.HumanEntity;
+import org.bukkit.entity.Interaction;
+import org.bukkit.entity.Item;
+import org.bukkit.entity.Mannequin;
 import io.papermc.paper.datacomponent.item.ResolvableProfile;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Pose;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -48,8 +56,10 @@ public class Grave {
     private final String playerName;
     private final Inventory gui;
     private int storedXP;
-    private final Mannequin mannequin;
-    private final Interaction interaction;
+    private volatile Mannequin entity;
+    private volatile Interaction[] interactions;
+    private final ItemStack[] equipmentSnapshot;
+    private final float yaw;
     private Hologram hologram;
     private boolean removed = false;
 
@@ -84,51 +94,103 @@ public class Grave {
         }
         items.forEach(gui::addItem);
 
-        float yaw = CONFIG.getBoolean("rotate-head-360", true)
+        this.yaw = CONFIG.getBoolean("rotate-head-360", true)
                 ? location.getYaw()
                 : LocationUtils.getNearestDirection(location.getYaw());
+        this.equipmentSnapshot = equipment == null ? null : equipment.clone();
 
-        Location spawnLoc = location.clone().add(0, 0.5, 0);
-
-        float headYaw = 90 - yaw;
-        double rad = Math.toRadians(headYaw);
-        double dx = -Math.sin(rad);
-        double dz = Math.cos(rad);
-        Location interactionLoc = spawnLoc.clone().add(dx, 0, dz);
-
-        interaction = location.getWorld().spawn(interactionLoc, Interaction.class, interaction1 -> {
-            interaction1.setInteractionWidth(1.0f);
-            interaction1.setInteractionHeight(0.2f);
-            interaction1.setRotation(yaw, 0);
-            interaction1.setGravity(true);
-            interaction1.setPersistent(false);
-        });
-        mannequin = location.getWorld().spawn(spawnLoc, Mannequin.class, mannequin1 -> {
-            mannequin1.setPose(Pose.SLEEPING);
-            mannequin1.setProfile(ResolvableProfile.resolvableProfile(offlinePlayer.getPlayerProfile()));
-            mannequin1.setInvulnerable(true);
-            mannequin1.setGravity(false);
-            mannequin1.setSilent(true);
-            mannequin1.setAI(false);
-            mannequin1.setCollidable(false);
-            mannequin1.setRotation(yaw, 0);
-            mannequin1.setPersistent(false);
-
-            if (equipment != null) {
-                org.bukkit.inventory.EntityEquipment eq = mannequin1.getEquipment();
-                if (equipment.length > 0 && equipment[0] != null) eq.setHelmet(equipment[0].clone());
-                if (equipment.length > 1 && equipment[1] != null) eq.setChestplate(equipment[1].clone());
-                if (equipment.length > 2 && equipment[2] != null) eq.setLeggings(equipment[2].clone());
-                if (equipment.length > 3 && equipment[3] != null) eq.setBoots(equipment[3].clone());
-                if (equipment.length > 4 && equipment[4] != null) eq.setItemInMainHand(equipment[4].clone());
-                if (equipment.length > 5 && equipment[5] != null) eq.setItemInOffHand(equipment[5].clone());
-            }
-        });
+        spawnMannequin();
+        spawnInteractions();
 
         updateHologram();
     }
 
+    private void spawnMannequin() {
+        Location spawnLoc = location.clone().add(0, 0.5, 0);
+        entity = location.getWorld().spawn(spawnLoc, Mannequin.class, mannequin -> {
+            mannequin.setPose(Pose.SLEEPING);
+            mannequin.setProfile(ResolvableProfile.resolvableProfile(player.getPlayerProfile()));
+            mannequin.setInvulnerable(true);
+            mannequin.setGravity(false);
+            mannequin.setSilent(true);
+            mannequin.setAI(false);
+            mannequin.setCollidable(false);
+            mannequin.setRotation(yaw, 0);
+            mannequin.setPersistent(false);
+
+            if (equipmentSnapshot != null) {
+                org.bukkit.inventory.EntityEquipment eq = mannequin.getEquipment();
+                if (equipmentSnapshot.length > 0 && equipmentSnapshot[0] != null) eq.setHelmet(equipmentSnapshot[0].clone());
+                if (equipmentSnapshot.length > 1 && equipmentSnapshot[1] != null) eq.setChestplate(equipmentSnapshot[1].clone());
+                if (equipmentSnapshot.length > 2 && equipmentSnapshot[2] != null) eq.setLeggings(equipmentSnapshot[2].clone());
+                if (equipmentSnapshot.length > 3 && equipmentSnapshot[3] != null) eq.setBoots(equipmentSnapshot[3].clone());
+                if (equipmentSnapshot.length > 4 && equipmentSnapshot[4] != null) eq.setItemInMainHand(equipmentSnapshot[4].clone());
+                if (equipmentSnapshot.length > 5 && equipmentSnapshot[5] != null) eq.setItemInOffHand(equipmentSnapshot[5].clone());
+            }
+        });
+    }
+
+    private void spawnInteractions() {
+        // Mannequin in Pose.SLEEPING is rendered lying flat, extending PERPENDICULAR to
+        // the mannequin's forward yaw direction, from the entity position outward across
+        // ~1.8 blocks. The entity position is at one end of the body (head/feet), not
+        // the middle. We therefore take the perpendicular of the forward yaw vector and
+        // place two 0.9-wide Interaction boxes at +0.45 and +1.35 along it, covering
+        // [0 .. 1.8] of the lying body with no gap.
+        double yawRad = Math.toRadians(yaw);
+        double dx = Math.cos(yawRad);
+        double dz = Math.sin(yawRad);
+
+        Location anchor = location.clone().add(0, 0.4, 0);
+        Location near = anchor.clone().add(dx * 0.45, 0, dz * 0.45);
+        Location far = anchor.clone().add(dx * 1.35, 0, dz * 1.35);
+
+        Interaction a = location.getWorld().spawn(near, Interaction.class, this::configureInteraction);
+        Interaction b = location.getWorld().spawn(far, Interaction.class, this::configureInteraction);
+        interactions = new Interaction[]{a, b};
+    }
+
+    private void configureInteraction(Interaction i) {
+        i.setInteractionWidth(0.9f);
+        i.setInteractionHeight(0.4f);
+        i.setResponsive(true);
+        i.setInvulnerable(true);
+        i.setPersistent(false);
+        i.setSilent(true);
+    }
+
     public void update() {
+        if (!location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)) return;
+
+        Mannequin currentEntity = entity;
+        Interaction[] currentInteractions = interactions;
+        boolean mannequinMissing = currentEntity == null || currentEntity.isDead();
+        boolean interactionsMissing = currentInteractions == null
+                || currentInteractions.length == 0
+                || currentInteractions[0] == null || currentInteractions[0].isDead()
+                || currentInteractions[1] == null || currentInteractions[1].isDead();
+
+        if (mannequinMissing || interactionsMissing) {
+            Scheduler.get().runAt(location, () -> {
+                Mannequin m = entity;
+                if (m == null || m.isDead()) spawnMannequin();
+
+                Interaction[] ixs = interactions;
+                boolean respawn = ixs == null
+                        || ixs.length == 0
+                        || ixs[0] == null || ixs[0].isDead()
+                        || ixs[1] == null || ixs[1].isDead();
+                if (respawn) {
+                    if (ixs != null) {
+                        for (Interaction ix : ixs) {
+                            if (ix != null && !ix.isDead()) ix.remove();
+                        }
+                    }
+                    spawnInteractions();
+                }
+            });
+        }
+
         int items = countItems();
 
         int time = CONFIG.getInt("despawn-time-seconds", 180);
@@ -141,9 +203,12 @@ public class Grave {
         }
 
         if (CONFIG.getBoolean("auto-rotation.enabled", false)) {
-            Location loc = mannequin.getLocation();
-            loc.setYaw(loc.getYaw() + CONFIG.getFloat("auto-rotation.speed", 10f));
-            mannequin.setRotation(loc.getYaw(), 0);
+            Mannequin m = entity;
+            if (m != null) {
+                Location loc = m.getLocation();
+                loc.setYaw(loc.getYaw() + CONFIG.getFloat("auto-rotation.speed", 10f));
+                m.setRotation(loc.getYaw(), 0);
+            }
         }
     }
 
@@ -270,8 +335,13 @@ public class Grave {
             SpawnedGraves.removeGrave(this);
             removeInventory();
 
-            if (interaction != null) interaction.remove();
-            if (mannequin != null) mannequin.remove();
+            if (entity != null) entity.remove();
+            Interaction[] ixs = interactions;
+            if (ixs != null) {
+                for (Interaction ix : ixs) {
+                    if (ix != null) ix.remove();
+                }
+            }
             if (hologram != null) hologram.remove();
         };
 
@@ -329,12 +399,12 @@ public class Grave {
         return storedXP;
     }
 
-    public Interaction getInteraction() {
-        return interaction;
+    public Mannequin getEntity() {
+        return entity;
     }
 
-    public Mannequin getMannequin() {
-        return mannequin;
+    public Interaction[] getInteractions() {
+        return interactions;
     }
 
     public Hologram getHologram() {
