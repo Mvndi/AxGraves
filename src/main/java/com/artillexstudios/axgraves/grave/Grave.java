@@ -132,18 +132,20 @@ public class Grave {
 
     private void spawnInteractions() {
         // Mannequin in Pose.SLEEPING is rendered lying flat, extending PERPENDICULAR to
-        // the mannequin's forward yaw direction, from the entity position outward across
-        // ~1.8 blocks. The entity position is at one end of the body (head/feet), not
-        // the middle. We therefore take the perpendicular of the forward yaw vector and
-        // place two 0.9-wide Interaction boxes at +0.45 and +1.35 along it, covering
-        // [0 .. 1.8] of the lying body with no gap.
+        // the mannequin's forward yaw direction, from the entity position (one end of the body)
+        // outward across ~1.8 blocks. The entity position is at one end of the body (head/feet).
+        // The exact end (head vs feet) flips depending on the yaw axis (N/S vs E/W alignments),
+        // which is why a simple ± offset only ever worked for two of the four cardinal directions.
+        // We therefore compute a dynamic multiplier (-cos(2 * yawRad)) so the two 0.9-wide
+        // Interaction boxes always cover the full lying body correctly for every yaw.
         double yawRad = Math.toRadians(yaw);
         double dx = Math.cos(yawRad);
         double dz = Math.sin(yawRad);
+        double multiplier = -Math.cos(2 * yawRad);
 
         Location anchor = location.clone().add(0, 0.4, 0);
-        Location near = anchor.clone().add(dx * 0.45, 0, dz * 0.45);
-        Location far = anchor.clone().add(dx * 1.35, 0, dz * 1.35);
+        Location near = anchor.clone().add(dx * 0.45 * multiplier, 0, dz * 0.45 * multiplier);
+        Location far = anchor.clone().add(dx * 1.35 * multiplier, 0, dz * 1.35 * multiplier);
 
         Interaction a = location.getWorld().spawn(near, Interaction.class, this::configureInteraction);
         Interaction b = location.getWorld().spawn(far, Interaction.class, this::configureInteraction);
