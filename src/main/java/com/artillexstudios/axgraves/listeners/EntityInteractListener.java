@@ -2,7 +2,6 @@ package com.artillexstudios.axgraves.listeners;
 
 import com.artillexstudios.axgraves.grave.Grave;
 import com.artillexstudios.axgraves.grave.SpawnedGraves;
-import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -17,13 +16,6 @@ public class EntityInteractListener implements Listener {
     public void onInteractEntity(PlayerInteractEntityEvent event) {
         if (!(event.getRightClicked() instanceof Interaction interaction)) return;
         if (!handleInteract(event.getPlayer(), interaction, event.getHand())) return;
-        event.setCancelled(true);
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST)
-    public void onPreAttack(PrePlayerAttackEntityEvent event) {
-        if (!(event.getAttacked() instanceof Interaction interaction)) return;
-        if (!handleInteract(event.getPlayer(), interaction, null)) return;
         event.setCancelled(true);
     }
 
