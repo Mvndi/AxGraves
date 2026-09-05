@@ -16,6 +16,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerPickupArrowEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.entity.Entity;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -53,6 +54,16 @@ public class GraveLockListener implements Listener {
 
         event.setCancelled(true);
         sendDeniedActionMessage(player, "item-drop");
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onSwapHands(PlayerSwapHandItemsEvent event) {
+        Player player = event.getPlayer();
+        if (!GraveLockUtils.isLocked(player))
+            return;
+
+        event.setCancelled(true);
+        sendDeniedActionMessage(player, "hand-swap");
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -108,6 +119,9 @@ public class GraveLockListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInventoryOpen(org.bukkit.event.inventory.InventoryOpenEvent event) {
         if (!(event.getPlayer() instanceof Player player))
+            return;
+
+        if (event.getInventory().getHolder() instanceof com.artillexstudios.axgraves.respawn.RespawnChoiceHolder)
             return;
 
         if (!GraveLockUtils.isLocked(player))

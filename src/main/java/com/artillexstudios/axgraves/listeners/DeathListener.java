@@ -18,6 +18,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.EventExecutor;
@@ -31,6 +32,7 @@ public class DeathListener implements Listener {
     private static boolean storeItems;
     private static boolean storeXP;
     private static float xpKeepPercentage;
+    private static boolean lockOnKillCommand;
 
     public static void reload() {
         disabledWorlds = CONFIG.getStringList("disabled-worlds");
@@ -40,6 +42,7 @@ public class DeathListener implements Listener {
         storeItems = CONFIG.getBoolean("store-items", true);
         storeXP = CONFIG.getBoolean("store-xp", true);
         xpKeepPercentage = CONFIG.getFloat("xp-keep-percentage", 1f);
+        lockOnKillCommand = CONFIG.getBoolean("grave-lock-on-kill-command", true);
     }
 
     public DeathListener() {
@@ -69,9 +72,15 @@ public class DeathListener implements Listener {
         Player player = event.getEntity();
         Player killer = player.getKiller();
 
+        com.artillexstudios.axgraves.respawn.RespawnChoiceMenu.removeCompassOnDeath(player, event);
+
         boolean stayOnGrave = true;
 
-        if (killer == null) {
+        boolean killCommand = lockOnKillCommand
+                && player.getLastDamageCause() != null
+                && player.getLastDamageCause().getCause() == EntityDamageEvent.DamageCause.KILL;
+
+        if (killer == null && !killCommand) {
             if (debug)
                 LogUtils.debug("[{}] killer is not a player", player.getName());
             stayOnGrave = false;
@@ -89,7 +98,7 @@ public class DeathListener implements Listener {
             stayOnGrave = false;
         } else if (debug) {
             LogUtils.debug("[{}] killer: {}, siege active: {}, near town spawn: {}", player.getName(),
-                    killer.getName(), isSiegeActive(player), isNearIsTownSpawn(player));
+                    killer == null ? "/kill" : killer.getName(), isSiegeActive(player), isNearIsTownSpawn(player));
         }
         if (isRealDeath(player)) {
             gravedPlayers.remove(player.getUniqueId());
@@ -118,6 +127,7 @@ public class DeathListener implements Listener {
             // Hide and protect player instead of spectator mode
             GraveLockUtils.applyGraveLockState(player);
             GraveLockUtils.showFalseDeathTitle(player);
+            com.artillexstudios.axgraves.api.RespawnChoiceAPI.setWantsShipRespawn(player, false);
             gravedPlayers.add(player.getUniqueId());
         }
         if (debug)
@@ -209,6 +219,7 @@ public class DeathListener implements Listener {
                 event.getDrops().clear();
                 if (stayOnGrave) {
                     player.getInventory().clear();
+                    com.artillexstudios.axgraves.respawn.RespawnChoiceMenu.giveCompassLater(player, 5L);
                 }
 
             }

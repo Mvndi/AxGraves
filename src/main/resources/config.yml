@@ -198,5 +198,10 @@ update-notifier:
 # this can cause a lot of spam, only use if a developer asks you to
 debug: false
 
+# whether /kill counts as a player kill, so it produces a grave and the respawn lock
+# (there is normally no killer, so /kill alone would just be a plain death)
+# on for testing the respawn choice without a second player - turn off for production
+grave-lock-on-kill-command: true
+
 # do not edit
 version: '19'

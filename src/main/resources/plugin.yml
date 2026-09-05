@@ -4,9 +4,10 @@ main: com.artillexstudios.axgraves.AxGraves
 api-version: '1.20'
 folia-supported: true
 
-softdepend: 
+softdepend:
   - TownyAdvanced
   - SiegeWar
+  - MvndiShips
 
 permissions:
   axgraves.help:

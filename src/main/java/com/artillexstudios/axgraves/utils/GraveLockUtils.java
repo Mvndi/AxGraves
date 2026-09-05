@@ -194,6 +194,8 @@ public final class GraveLockUtils {
 
             applyGraveLockState(player);
             showFalseDeathTitle(player);
+
+            com.artillexstudios.axgraves.respawn.RespawnChoiceMenu.giveCompassLater(player, 20L);
         }
     }
 

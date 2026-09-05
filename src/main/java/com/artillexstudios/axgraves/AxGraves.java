@@ -18,6 +18,7 @@ import com.artillexstudios.axgraves.grave.SpawnedGraves;
 import com.artillexstudios.axgraves.listeners.DeathListener;
 import com.artillexstudios.axgraves.listeners.EntityInteractListener;
 import com.artillexstudios.axgraves.listeners.GraveLockListener;
+import com.artillexstudios.axgraves.respawn.RespawnChoiceMenu;
 import com.artillexstudios.axgraves.schedulers.SaveGraves;
 import com.artillexstudios.axgraves.schedulers.TickGraves;
 import com.artillexstudios.axgraves.utils.GraveLockUtils;
@@ -69,6 +70,7 @@ public final class AxGraves extends AxPlugin {
         new DeathListener();
         getServer().getPluginManager().registerEvents(new EntityInteractListener(), this);
         getServer().getPluginManager().registerEvents(new GraveLockListener(this), this);
+        getServer().getPluginManager().registerEvents(new RespawnChoiceMenu(), this);
 
         CommandManager.load();
         GravePlaceholders.register();
