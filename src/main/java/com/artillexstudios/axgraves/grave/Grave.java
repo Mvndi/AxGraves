@@ -117,6 +117,7 @@ public class Grave {
             mannequin.setCollidable(false);
             mannequin.setRotation(yaw, 0);
             mannequin.setPersistent(false);
+            mannequin.setImmovable(true);
 
             if (equipmentSnapshot != null) {
                 org.bukkit.inventory.EntityEquipment eq = mannequin.getEquipment();
