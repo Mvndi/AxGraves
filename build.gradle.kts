@@ -66,7 +66,7 @@ dependencies {
     compileOnly("com.github.TownyAdvanced:SiegeWar:2.19.3") {
         exclude(group = "org.bukkit", module = "bukkit")
     }
-    compileOnly("net.mvndicraft:mvndiships:1.0.1-SNAPSHOT")
+    compileOnly("net.mvndicraft:mvndiships:1.0.3-SNAPSHOT")
 }
 
 tasks.withType<JavaCompile>() {
