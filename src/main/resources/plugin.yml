@@ -7,7 +7,6 @@ folia-supported: true
 softdepend:
   - TownyAdvanced
   - SiegeWar
-  - MvndiShips
 
 permissions:
   axgraves.help:

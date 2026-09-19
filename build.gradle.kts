@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.artillexstudios"
-version = "1.29.2"
+version = "1.29.3"
 description = "AxGraves"
 java.sourceCompatibility = JavaVersion.VERSION_21
 var mainMinecraftVersion = "1.21.11"
@@ -66,7 +66,6 @@ dependencies {
     compileOnly("com.github.TownyAdvanced:SiegeWar:2.19.3") {
         exclude(group = "org.bukkit", module = "bukkit")
     }
-    compileOnly("net.mvndicraft:mvndiships:1.0.3-SNAPSHOT")
 }
 
 tasks.withType<JavaCompile>() {

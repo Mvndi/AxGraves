@@ -127,7 +127,6 @@ public class DeathListener implements Listener {
             // Hide and protect player instead of spectator mode
             GraveLockUtils.applyGraveLockState(player);
             GraveLockUtils.showFalseDeathTitle(player);
-            com.artillexstudios.axgraves.api.RespawnChoiceAPI.setWantsShipRespawn(player, false);
             gravedPlayers.add(player.getUniqueId());
         }
         if (debug)

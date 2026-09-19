@@ -1,31 +1,23 @@
 package com.artillexstudios.axgraves.api;
 
-import com.artillexstudios.axgraves.AxGraves;
-import com.artillexstudios.axgraves.utils.GraveLockUtils;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
-import org.bukkit.persistence.PersistentDataType;
 
 public final class RespawnChoiceAPI {
-    private static final NamespacedKey RESPAWN_AT_SHIP_KEY = new NamespacedKey(AxGraves.getInstance(), "respawn_at_spawn_ship");
+
+    private static volatile Provider provider;
 
     private RespawnChoiceAPI() {
     }
 
-    public static void setWantsShipRespawn(Player player, boolean wantsShipRespawn) {
-        if (wantsShipRespawn) {
-            player.getPersistentDataContainer().set(RESPAWN_AT_SHIP_KEY, PersistentDataType.BOOLEAN, true);
-        } else {
-            player.getPersistentDataContainer().remove(RESPAWN_AT_SHIP_KEY);
-        }
+    public interface Provider {
+        boolean open(Player player);
     }
 
-    public static boolean consumeWantsShipRespawn(Player player) {
-        if (GraveLockUtils.isGravedPlayer(player))
-            return false;
+    public static void setProvider(Provider provider) {
+        RespawnChoiceAPI.provider = provider;
+    }
 
-        boolean wants = player.getPersistentDataContainer().getOrDefault(RESPAWN_AT_SHIP_KEY, PersistentDataType.BOOLEAN, false);
-        player.getPersistentDataContainer().remove(RESPAWN_AT_SHIP_KEY);
-        return wants;
+    public static Provider getProvider() {
+        return provider;
     }
 }

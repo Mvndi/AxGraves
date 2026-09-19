@@ -121,7 +121,7 @@ public class GraveLockListener implements Listener {
         if (!(event.getPlayer() instanceof Player player))
             return;
 
-        if (event.getInventory().getHolder() instanceof com.artillexstudios.axgraves.respawn.RespawnChoiceHolder)
+        if (com.artillexstudios.axgraves.respawn.RespawnChoiceMenu.isOpening(player))
             return;
 
         if (!GraveLockUtils.isLocked(player))
