@@ -65,8 +65,10 @@ public class RespawnChoiceMenu implements Listener {
         int slot = COMPASS_SLOT;
         if (inv.getItem(slot) != null) {
             slot = inv.firstEmpty();
-            if (slot == -1)
+            if (slot == -1) {
+                offer(player);
                 return;
+            }
         }
 
         inv.setItem(slot, compass);

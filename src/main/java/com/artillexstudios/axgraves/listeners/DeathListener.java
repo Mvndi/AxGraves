@@ -115,6 +115,7 @@ public class DeathListener implements Listener {
 
         if (stayOnGrave) {
             long currentTime = System.currentTimeMillis();
+            GraveLockUtils.registerDeath(player, currentTime);
             GraveLockUtils.setGravedPlayer(player, currentTime);
 
             if (player.getVehicle() != null) {
@@ -128,6 +129,7 @@ public class DeathListener implements Listener {
             GraveLockUtils.applyGraveLockState(player);
             GraveLockUtils.showFalseDeathTitle(player);
             gravedPlayers.add(player.getUniqueId());
+            com.artillexstudios.axgraves.respawn.RespawnChoiceMenu.giveCompassLater(player, 5L);
         }
         if (debug)
             LogUtils.debug("[{}] spawning grave", player.getName());
@@ -218,7 +220,6 @@ public class DeathListener implements Listener {
                 event.getDrops().clear();
                 if (stayOnGrave) {
                     player.getInventory().clear();
-                    com.artillexstudios.axgraves.respawn.RespawnChoiceMenu.giveCompassLater(player, 5L);
                 }
 
             }

@@ -28,6 +28,19 @@ town-respawn-lock-seconds: 30
 # if <= 0, there will be no grave time lock during sieges, even if the player is near a town spawn
 siege-respawn-lock-seconds: 45
 
+# dying over and over in a siege makes the wait longer, taking a break brings it back down
+# with the values below that is 45 -> 60 -> 75 -> 90 -> 105 -> 120, then back to 45
+# the wait is worked out when the player dies, so it never changes once it has started
+siege-respawn-penalty:
+  # set to false to always use siege-respawn-lock-seconds
+  enabled: true
+  # added on for every siege death after the first
+  additional-seconds-per-death: 15
+  # the wait never goes above this, set to 0 for no cap
+  maximum-respawn-seconds: 120
+  # this long without another siege death and it starts over from the top
+  reset-after-seconds-without-death: 600
+
 grave-lock-sounds:
   last: block.lever.click # when the player respawn
   interval: block.lever.click # every 5s

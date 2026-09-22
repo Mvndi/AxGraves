@@ -23,6 +23,9 @@ import org.bukkit.persistence.PersistentDataType;
 public final class GraveLockUtils {
     private static NamespacedKey gravedKey = new NamespacedKey(AxGraves.getInstance(), "graved");
     private static NamespacedKey logoutKey = new NamespacedKey(AxGraves.getInstance(), "logged-out");
+    private static NamespacedKey lockDurationKey = new NamespacedKey(AxGraves.getInstance(), "lock-duration");
+    private static NamespacedKey siegeStreakKey = new NamespacedKey(AxGraves.getInstance(), "siege-death-streak");
+    private static NamespacedKey siegeLastDeathKey = new NamespacedKey(AxGraves.getInstance(), "siege-last-death");
 
     // Track vanished/invisible players
     private static final Set<UUID> vanishedPlayers = ConcurrentHashMap.newKeySet();
@@ -71,6 +74,7 @@ public final class GraveLockUtils {
 
     private static final long DEFAULT_MOVE_LOCK_SECONDS = 30L;
     private static final long REJOIN_PENDING_SENTINEL = -1L;
+    private static final int MAX_SIEGE_DEATH_STREAK = 1000;
     private static ScheduledFuture<?> cleanupTask;
 
     private GraveLockUtils() {}
@@ -102,7 +106,7 @@ public final class GraveLockUtils {
             return true;
         }
 
-        if (now - storedValue < getRespawnLockSeconds(player)) {
+        if (now - storedValue < getActiveLockMillis(player)) {
             return true;
 
         }
@@ -130,7 +134,7 @@ public final class GraveLockUtils {
             return Math.max(0L, (-storedValue) - now);
         }
 
-        long remaining = getRespawnLockSeconds(player) - (now - storedValue);
+        long remaining = getActiveLockMillis(player) - (now - storedValue);
 
         return Math.max(0L, remaining);
     }
@@ -281,7 +285,7 @@ public final class GraveLockUtils {
                 continue;
             }
 
-            if (now - storedValue < getRespawnLockSeconds(player)) {
+            if (now - storedValue < getActiveLockMillis(player)) {
                 continue;
             }
 
@@ -327,6 +331,7 @@ public final class GraveLockUtils {
     }
     public static void unsetGravedPlayer(Player player) {
         player.getPersistentDataContainer().remove(gravedKey);
+        player.getPersistentDataContainer().remove(lockDurationKey);
     }
     public static boolean isGravedPlayer(Player player) {
         return player.getPersistentDataContainer().has(gravedKey);
@@ -343,7 +348,71 @@ public final class GraveLockUtils {
     }
 
 
-    public static long getRespawnLockSeconds(Player player) {
+    public static long registerDeath(Player player, long now) {
+        if (isGravedPlayer(player) && getRemainingLockMillis(player) > 0L) {
+            return getActiveLockMillis(player);
+        }
+
+        long duration;
+        if (isSiegeActive(player)) {
+            duration = nextSiegeLockMillis(player, now);
+        } else if (isNearIsTownSpawn(player)) {
+            duration = getMoveTownLockMillis();
+        } else {
+            duration = getMoveNormalLockMillis();
+        }
+
+        player.getPersistentDataContainer().set(lockDurationKey, PersistentDataType.LONG, duration);
+        return duration;
+    }
+
+    private static long nextSiegeLockMillis(Player player, long now) {
+        long base = getMoveSiegeLockMillis();
+        if (!AxGraves.CONFIG.getBoolean("siege-respawn-penalty.enabled", true)) {
+            return base;
+        }
+
+        long resetMillis = Math.max(0L,
+                AxGraves.CONFIG.getLong("siege-respawn-penalty.reset-after-seconds-without-death", 600L)) * 1000L;
+        long lastDeath = player.getPersistentDataContainer().getOrDefault(siegeLastDeathKey, PersistentDataType.LONG,
+                0L);
+        int streak = player.getPersistentDataContainer().getOrDefault(siegeStreakKey, PersistentDataType.INTEGER, 0);
+
+        if (streak < 1 || lastDeath <= 0L || now - lastDeath > resetMillis) {
+            streak = 1;
+        } else {
+            streak = Math.min(streak + 1, MAX_SIEGE_DEATH_STREAK);
+        }
+
+        player.getPersistentDataContainer().set(siegeStreakKey, PersistentDataType.INTEGER, streak);
+        player.getPersistentDataContainer().set(siegeLastDeathKey, PersistentDataType.LONG, now);
+
+        long extra = Math.max(0L,
+                AxGraves.CONFIG.getLong("siege-respawn-penalty.additional-seconds-per-death", 15L)) * 1000L;
+        long maximum = Math.max(0L,
+                AxGraves.CONFIG.getLong("siege-respawn-penalty.maximum-respawn-seconds", 120L)) * 1000L;
+
+        long duration = base + (streak - 1) * extra;
+        if (maximum > 0L) {
+            duration = Math.min(duration, Math.max(base, maximum));
+        }
+
+        if (AxGraves.isDebugMode()) {
+            LogUtils.debug("[{}] siege death streak {} -> lock of {}s", player.getName(), streak, duration / 1000L);
+        }
+        return duration;
+    }
+
+    public static long getActiveLockMillis(Player player) {
+        Long frozen = player.getPersistentDataContainer().get(lockDurationKey, PersistentDataType.LONG);
+        if (frozen != null) {
+            return Math.max(0L, frozen);
+        }
+
+        return getRespawnLockMillis(player);
+    }
+
+    public static long getRespawnLockMillis(Player player) {
         if (isSiegeActive(player)) {
             return getMoveSiegeLockMillis();
         } else if (isNearIsTownSpawn(player)) {
