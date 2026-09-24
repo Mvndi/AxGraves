@@ -28,6 +28,19 @@ town-respawn-lock-seconds: 30
 # if <= 0, there will be no grave time lock during sieges, even if the player is near a town spawn
 siege-respawn-lock-seconds: 45
 
+# dying over and over in a siege makes the wait longer, taking a break brings it back down
+# with the values below that is 45 -> 60 -> 75 -> 90 -> 105 -> 120, then back to 45
+# the wait is worked out when the player dies, so it never changes once it has started
+siege-respawn-penalty:
+  # set to false to always use siege-respawn-lock-seconds
+  enabled: true
+  # added on for every siege death after the first
+  additional-seconds-per-death: 15
+  # the wait never goes above this, set to 0 for no cap
+  maximum-respawn-seconds: 120
+  # this long without another siege death and it starts over from the top
+  reset-after-seconds-without-death: 600
+
 grave-lock-sounds:
   last: block.lever.click # when the player respawn
   interval: block.lever.click # every 5s
@@ -171,7 +184,7 @@ blacklisted-items:
 # however if the plugin is spawning graves without items, you can try setting this to lower values (lower = runs earlier)
 # values: LOWEST, LOW, NORMAL, HIGH, HIGHEST, MONITOR
 # requires a restart to change
-death-listener-priority: MONITOR
+death-listener-priority: HIGHEST
 
 # settings for holograms displays
 holograms:
@@ -197,6 +210,11 @@ update-notifier:
 # prints out a lot of information about the plugin in the console
 # this can cause a lot of spam, only use if a developer asks you to
 debug: false
+
+# whether /kill counts as a player kill, so it produces a grave and the respawn lock
+# (there is normally no killer, so /kill alone would just be a plain death)
+# on for testing the respawn choice without a second player - turn off for production
+grave-lock-on-kill-command: true
 
 # do not edit
 version: '19'

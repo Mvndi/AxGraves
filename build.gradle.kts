@@ -6,12 +6,18 @@ plugins {
 }
 
 group = "com.artillexstudios"
-version = "1.28.0"
+version = "1.29.3"
 description = "AxGraves"
 java.sourceCompatibility = JavaVersion.VERSION_21
 var mainMinecraftVersion = "1.21.11"
 val supportedMinecraftVersions = "1.20 - 1.21.11"
 
+
+// Registered before the Mvndi remotes below: Gradle resolves in repository declaration order,
+// and `repositories.maven(...)` registers immediately, so a `mavenLocal()` written inside the
+// repositories { } block would still come last and let stale remote SNAPSHOTs shadow the
+// freshly installed local builds of the Mvndi plugins.
+repositories.mavenLocal()
 
 val mvndiRemote = repositories.maven("https://repo.mvndicraft.net/repository/maven-snapshots/") {
     name = "Mvndi"
