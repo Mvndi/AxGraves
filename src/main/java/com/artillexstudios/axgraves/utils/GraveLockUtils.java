@@ -69,6 +69,7 @@ public final class GraveLockUtils {
             }
             player.setCanPickupItems(true);
             vanishedPlayers.remove(player.getUniqueId());
+            com.artillexstudios.axgraves.respawn.RespawnChoiceMenu.removeCompass(player);
         });
     }
 

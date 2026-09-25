@@ -29,7 +29,8 @@ town-respawn-lock-seconds: 30
 siege-respawn-lock-seconds: 45
 
 # dying over and over in a siege makes the wait longer, taking a break brings it back down
-# with the values below that is 45 -> 60 -> 75 -> 90 -> 105 -> 120, then back to 45
+# with the values below that is 45 -> 60 -> 75 -> 90 -> 105 -> 120, then it stays at 120
+# until the player goes reset-after-seconds-without-death without a siege death, then it's back to 45
 # the wait is worked out when the player dies, so it never changes once it has started
 siege-respawn-penalty:
   # set to false to always use siege-respawn-lock-seconds

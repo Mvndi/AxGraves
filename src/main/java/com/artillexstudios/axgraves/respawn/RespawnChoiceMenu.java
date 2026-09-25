@@ -126,6 +126,10 @@ public class RespawnChoiceMenu implements Listener {
             return;
 
         event.setCancelled(true);
+        if (GraveLockUtils.getRemainingLockMillis(event.getPlayer()) <= 0) {
+            removeCompass(event.getPlayer());
+            return;
+        }
         offer(event.getPlayer());
     }
 
