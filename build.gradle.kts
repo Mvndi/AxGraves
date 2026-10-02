@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.artillexstudios"
-version = "1.29.3"
+version = "1.32.1"
 description = "AxGraves"
 java.sourceCompatibility = JavaVersion.VERSION_21
 var mainMinecraftVersion = "1.21.11"

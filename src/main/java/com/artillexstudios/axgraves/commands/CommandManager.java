@@ -12,6 +12,7 @@ import static com.artillexstudios.axgraves.AxGraves.CONFIG;
 
 public class CommandManager {
     private static BukkitCommandHandler handler = null;
+    private static List<String> commandAliases;
 
     public static void load() {
         handler = BukkitCommandHandler.create(AxGraves.getInstance());
@@ -25,11 +26,15 @@ public class CommandManager {
     public static void reload() {
         handler.unregisterAllCommands();
 
-        List<String> aliases = CONFIG.getStringList("command-aliases");
-        if (!aliases.isEmpty()) {
-            handler.register(Orphans.path(aliases.toArray(String[]::new)).handler(new Commands()));
+        commandAliases = CONFIG.getStringList("command-aliases");
+        if (!commandAliases.isEmpty()) {
+            handler.register(Orphans.path(commandAliases.toArray(String[]::new)).handler(new Commands()));
         }
 
         handler.registerBrigadier();
+    }
+
+    public static List<String> getCommandAliases() {
+        return commandAliases;
     }
 }

@@ -1,6 +1,7 @@
 package com.artillexstudios.axgraves.commands.subcommands;
 
 import com.artillexstudios.axapi.utils.StringUtils;
+import com.artillexstudios.axgraves.commands.CommandManager;
 import com.artillexstudios.axgraves.grave.Grave;
 import com.artillexstudios.axgraves.grave.SpawnedGraves;
 import com.artillexstudios.axgraves.utils.LocationUtils;
@@ -48,8 +49,11 @@ public enum List {
             }
 
             BaseComponent[] text = TextComponent.fromLegacyText(StringUtils.formatToString(LANG.getString("grave-list.grave"), new HashMap<>(map)));
-            for (BaseComponent component : text) {
-                component.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, String.format(Locale.ENGLISH, "/axgraves tp %s %f %f %f", l.getWorld().getName(), l.getX(), l.getY(), l.getZ())));
+            java.util.List<String> aliases = CommandManager.getCommandAliases();
+            if (!aliases.isEmpty()) { // && sender.hasPermission("axgraves.tp")
+                for (BaseComponent component : text) {
+                    component.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, String.format(Locale.ENGLISH, "/%s tp %s %f %f %f", CommandManager.getCommandAliases().getFirst(), l.getWorld().getName(), l.getX(), l.getY(), l.getZ())));
+                }
             }
             sender.spigot().sendMessage(text);
         }
