@@ -9,7 +9,7 @@ import com.artillexstudios.axapi.packetentity.meta.entity.DisplayMeta;
 import com.artillexstudios.axapi.packetentity.meta.entity.TextDisplayMeta;
 import com.artillexstudios.axapi.scheduler.Scheduler;
 import com.artillexstudios.axapi.utils.StringUtils;
-import com.artillexstudios.axgraves.AxGraves;
+import com.artillexstudios.axapi.utils.logging.LogUtils;
 import com.artillexstudios.axgraves.api.events.GraveInteractEvent;
 import com.artillexstudios.axgraves.api.events.GraveOpenEvent;
 import com.artillexstudios.axgraves.utils.BlacklistUtils;
@@ -31,6 +31,7 @@ import org.bukkit.entity.Mannequin;
 import io.papermc.paper.datacomponent.item.ResolvableProfile;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Pose;
+import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -62,11 +63,12 @@ public class Grave {
     private final float yaw;
     private Hologram hologram;
     private boolean removed = false;
+    private boolean spawnFailureReported = false;
 
     public Grave(Location loc, @NotNull OfflinePlayer offlinePlayer, @NotNull List<ItemStack> items, int storedXP, long date, @Nullable ItemStack[] equipment) {
         items = new ArrayList<>(items);
         items.removeIf(it -> {
-            if (it == null) return true;
+            if (it == null || it.getType().isAir() || it.getAmount() <= 0) return true;
             if (BlacklistUtils.isBlacklisted(it)) return true;
             return false;
         });
@@ -97,10 +99,25 @@ public class Grave {
         this.yaw = CONFIG.getBoolean("rotate-head-360", true)
                 ? location.getYaw()
                 : LocationUtils.getNearestDirection(location.getYaw());
-        this.equipmentSnapshot = equipment == null ? null : equipment.clone();
+        this.equipmentSnapshot = new ItemStack[6];
+        if (equipment != null) {
+            for (int i = 0; i < Math.min(equipment.length, equipmentSnapshot.length); i++) {
+                if (equipment[i] != null) equipmentSnapshot[i] = equipment[i].clone();
+            }
+        } else {
+            // Older saves have no equipment snapshot; display armor from their stored items.
+            for (ItemStack item : gui.getContents()) {
+                if (item == null) continue;
+                Material material = item.getType();
+                int slot = Utils.isHelmet(material) ? 0 : Utils.isChestplate(material) ? 1
+                        : Utils.isLeggings(material) ? 2 : Utils.isBoots(material) ? 3 : -1;
+                if (slot >= 0 && equipmentSnapshot[slot] == null) equipmentSnapshot[slot] = item.clone();
+            }
+        }
 
         spawnMannequin();
         spawnInteractions();
+        reportSpawnFailure();
 
         updateHologram();
     }
@@ -119,15 +136,7 @@ public class Grave {
             mannequin.setPersistent(false);
             mannequin.setImmovable(true);
 
-            if (equipmentSnapshot != null) {
-                org.bukkit.inventory.EntityEquipment eq = mannequin.getEquipment();
-                if (equipmentSnapshot.length > 0 && equipmentSnapshot[0] != null) eq.setHelmet(equipmentSnapshot[0].clone());
-                if (equipmentSnapshot.length > 1 && equipmentSnapshot[1] != null) eq.setChestplate(equipmentSnapshot[1].clone());
-                if (equipmentSnapshot.length > 2 && equipmentSnapshot[2] != null) eq.setLeggings(equipmentSnapshot[2].clone());
-                if (equipmentSnapshot.length > 3 && equipmentSnapshot[3] != null) eq.setBoots(equipmentSnapshot[3].clone());
-                if (equipmentSnapshot.length > 4 && equipmentSnapshot[4] != null) eq.setItemInMainHand(equipmentSnapshot[4].clone());
-                if (equipmentSnapshot.length > 5 && equipmentSnapshot[5] != null) eq.setItemInOffHand(equipmentSnapshot[5].clone());
-            }
+            updateEquipment(mannequin);
         });
     }
 
@@ -163,36 +172,11 @@ public class Grave {
     }
 
     public void update() {
-        if (!location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)) return;
+        Scheduler.get().runAt(location, this::updateInRegion);
+    }
 
-        Mannequin currentEntity = entity;
-        Interaction[] currentInteractions = interactions;
-        boolean mannequinMissing = currentEntity == null || currentEntity.isDead();
-        boolean interactionsMissing = currentInteractions == null
-                || currentInteractions.length == 0
-                || currentInteractions[0] == null || currentInteractions[0].isDead()
-                || currentInteractions[1] == null || currentInteractions[1].isDead();
-
-        if (mannequinMissing || interactionsMissing) {
-            Scheduler.get().runAt(location, () -> {
-                Mannequin m = entity;
-                if (m == null || m.isDead()) spawnMannequin();
-
-                Interaction[] ixs = interactions;
-                boolean respawn = ixs == null
-                        || ixs.length == 0
-                        || ixs[0] == null || ixs[0].isDead()
-                        || ixs[1] == null || ixs[1].isDead();
-                if (respawn) {
-                    if (ixs != null) {
-                        for (Interaction ix : ixs) {
-                            if (ix != null && !ix.isDead()) ix.remove();
-                        }
-                    }
-                    spawnInteractions();
-                }
-            });
-        }
+    private void updateInRegion() {
+        if (removed || !location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)) return;
 
         int items = countItems();
 
@@ -201,9 +185,23 @@ public class Grave {
         boolean despawn = CONFIG.getBoolean("despawn-when-empty", true);
         boolean empty = items == 0 && storedXP == 0;
         if ((time != -1 && outOfTime) || (despawn && empty)) {
-            Scheduler.get().runAt(location, this::remove);
+            remove();
             return;
         }
+
+        if (entity == null || !entity.isValid()) spawnMannequin();
+        Interaction[] ixs = interactions;
+        if (ixs == null || ixs.length != 2 || ixs[0] == null || !ixs[0].isValid()
+                || ixs[1] == null || !ixs[1].isValid()) {
+            if (ixs != null) {
+                for (Interaction ix : ixs) {
+                    if (ix != null) ix.remove();
+                }
+            }
+            spawnInteractions();
+        }
+        reportSpawnFailure();
+        updateEquipment(entity);
 
         if (CONFIG.getBoolean("auto-rotation.enabled", false)) {
             Mannequin m = entity;
@@ -213,6 +211,55 @@ public class Grave {
                 m.setRotation(loc.getYaw(), 0);
             }
         }
+    }
+
+    private void reportSpawnFailure() {
+        boolean valid = entity != null && entity.isValid() && interactions != null
+                && interactions.length == 2 && interactions[0].isValid() && interactions[1].isValid();
+        if (!valid && !spawnFailureReported) {
+            LogUtils.warn("Grave entities for {} at {} did not enter the world. Check entity spawn restrictions in other plugins. Mannequin valid: {}, interactions valid: {}",
+                    playerName, location, entity != null && entity.isValid(),
+                    interactions != null && interactions.length == 2
+                            && interactions[0].isValid() && interactions[1].isValid());
+        }
+        spawnFailureReported = !valid;
+    }
+
+    private void updateEquipment(Mannequin mannequin) {
+        // Only show equipment still present in the grave. Consume matching amounts so
+        // identical items in both hands cannot display more than the grave actually holds.
+        List<ItemStack> remaining = new ArrayList<>();
+        for (ItemStack item : gui.getContents()) {
+            if (!isSlotEmpty(item)) remaining.add(item.clone());
+        }
+        EquipmentSlot[] slots = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS,
+                EquipmentSlot.FEET, EquipmentSlot.HAND, EquipmentSlot.OFF_HAND};
+        EntityEquipment equipment = mannequin.getEquipment();
+        for (int i = 0; i < slots.length; i++) {
+            ItemStack display = null;
+            ItemStack original = equipmentSnapshot[i];
+            if (!isSlotEmpty(original)) {
+                for (ItemStack item : remaining) {
+                    if (item.getAmount() <= 0 || !item.isSimilar(original)) continue;
+                    display = original.clone();
+                    display.setAmount(Math.min(original.getAmount(), item.getAmount()));
+                    item.setAmount(item.getAmount() - display.getAmount());
+                    break;
+                }
+            }
+            if (!java.util.Objects.equals(equipment.getItem(slots[i]), display == null
+                    ? new ItemStack(Material.AIR) : display)) {
+                equipment.setItem(slots[i], display);
+            }
+        }
+    }
+
+    public ItemStack[] getEquipmentSnapshot() {
+        ItemStack[] copy = new ItemStack[equipmentSnapshot.length];
+        for (int i = 0; i < copy.length; i++) {
+            if (equipmentSnapshot[i] != null) copy[i] = equipmentSnapshot[i].clone();
+        }
+        return copy;
     }
 
     public void interact(@NotNull Player opener, @Nullable EquipmentSlot slot) {
@@ -288,7 +335,7 @@ public class Grave {
 
     private boolean isSlotEmpty(ItemStack item) {
         if (item == null) return true;
-        return item.getType().isAir();
+        return item.getType().isAir() || item.getAmount() <= 0;
     }
 
     public void updateHologram() {
@@ -324,7 +371,7 @@ public class Grave {
     public int countItems() {
         int am = 0;
         for (ItemStack it : gui.getContents()) {
-            if (it == null) continue;
+            if (isSlotEmpty(it)) continue;
             am++;
         }
         return am;

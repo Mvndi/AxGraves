@@ -1,6 +1,7 @@
 package com.artillexstudios.axgraves.grave;
 
 import com.artillexstudios.axapi.serializers.Serializers;
+import com.artillexstudios.axapi.scheduler.Scheduler;
 import com.artillexstudios.axgraves.AxGraves;
 import com.artillexstudios.axgraves.utils.LimitUtils;
 import com.google.gson.Gson;
@@ -64,6 +65,7 @@ public class SpawnedGraves {
             obj.addProperty("location", Serializers.LOCATION.serialize(grave.getLocation()));
             obj.addProperty("owner", grave.getPlayer().getUniqueId().toString());
             obj.addProperty("items", Base64.getEncoder().encodeToString(Serializers.ITEM_ARRAY.serialize(grave.getGui().getContents())));
+            obj.addProperty("equipment", Base64.getEncoder().encodeToString(Serializers.ITEM_ARRAY.serialize(grave.getEquipmentSnapshot())));
             obj.addProperty("xp", grave.getStoredXP());
             obj.addProperty("date", grave.getSpawned());
 
@@ -99,7 +101,11 @@ public class SpawnedGraves {
                 ItemStack[] items = Serializers.ITEM_ARRAY.deserialize(Base64.getDecoder().decode(itStr));
                 int xp = obj.get("xp").getAsInt();
                 long date = obj.get("date").getAsLong();
-                addGrave(new Grave(location, owner, Arrays.asList(items), xp, date, null));
+                ItemStack[] equipment = obj.has("equipment")
+                        ? Serializers.ITEM_ARRAY.deserialize(Base64.getDecoder().decode(obj.get("equipment").getAsString()))
+                        : null;
+                Scheduler.get().runAt(location,
+                        () -> addGrave(new Grave(location, owner, Arrays.asList(items), xp, date, equipment)));
             }
         } catch (Exception ex) {
             ex.printStackTrace();

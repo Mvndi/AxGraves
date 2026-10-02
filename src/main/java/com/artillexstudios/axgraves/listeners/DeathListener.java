@@ -59,12 +59,18 @@ public class DeathListener implements Listener {
 
         EventExecutor executor = (listener, event) -> {
             if (listener instanceof DeathListener && event instanceof PlayerDeathEvent deathEvent) {
+                if (deathEvent.isCancelled()) {
+                    if (AxGraves.isDebugMode()) {
+                        LogUtils.debug("[{}] return: PlayerDeathEvent already cancelled before AxGraves listener", deathEvent.getEntity().getName());
+                    }
+                    return;
+                }
                 onDeath(deathEvent);
             }
         };
 
         AxGraves.getInstance().getServer().getPluginManager().registerEvent(PlayerDeathEvent.class, this, eventPriority,
-                executor, AxGraves.getInstance(), true);
+                executor, AxGraves.getInstance(), false);
     }
 
     public void onDeath(PlayerDeathEvent event) {
@@ -122,7 +128,9 @@ public class DeathListener implements Listener {
                 player.getVehicle().getScheduler().run(AxGraves.getInstance(),
                         scheduledTask -> player.getVehicle().removePassenger(player), null);
             }
-            Bukkit.getServer().sendMessage(event.deathMessage());
+            if (event.deathMessage() != null) {
+                Bukkit.getServer().sendMessage(event.deathMessage());
+            }
             event.setCancelled(true);
 
             // Hide and protect player instead of spectator mode
@@ -203,6 +211,17 @@ public class DeathListener implements Listener {
             LogUtils.debug("[{}] storeXP: {} - getKeepLevel: {} - overrideKeepLevel: {}", player.getName(), storeXP,
                     event.getKeepLevel(), overrideKeepLevel);
 
+        // Snapshot player equipment for mannequin display
+        org.bukkit.inventory.PlayerInventory inv = player.getInventory();
+        ItemStack[] equipment = new ItemStack[] {
+                inv.getHelmet() != null ? inv.getHelmet().clone() : null,
+                inv.getChestplate() != null ? inv.getChestplate().clone() : null,
+                inv.getLeggings() != null ? inv.getLeggings().clone() : null,
+                inv.getBoots() != null ? inv.getBoots().clone() : null,
+                inv.getItemInMainHand().getType().isAir() ? null : inv.getItemInMainHand().clone(),
+                inv.getItemInOffHand().getType().isAir() ? null : inv.getItemInOffHand().clone()
+        };
+
         List<ItemStack> drops = new ArrayList<>();
         if (storeItems) {
             boolean store = false;
@@ -255,17 +274,6 @@ public class DeathListener implements Listener {
                 LogUtils.debug("[{}] return: drops empty and xp is 0", player.getName());
             return;
         }
-
-        // Snapshot player equipment for mannequin display
-        org.bukkit.inventory.PlayerInventory inv = player.getInventory();
-        ItemStack[] equipment = new ItemStack[] {
-                inv.getHelmet() != null ? inv.getHelmet().clone() : null,
-                inv.getChestplate() != null ? inv.getChestplate().clone() : null,
-                inv.getLeggings() != null ? inv.getLeggings().clone() : null,
-                inv.getBoots() != null ? inv.getBoots().clone() : null,
-                inv.getItemInMainHand().getType().isAir() ? null : inv.getItemInMainHand().clone(),
-                inv.getItemInOffHand().getType().isAir() ? null : inv.getItemInOffHand().clone()
-        };
 
         Grave grave = new Grave(location, player, drops, xp, System.currentTimeMillis(), equipment);
         SpawnedGraves.addGrave(grave);
