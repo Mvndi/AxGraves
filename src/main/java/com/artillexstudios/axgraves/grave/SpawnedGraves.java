@@ -69,6 +69,16 @@ public class SpawnedGraves {
             obj.addProperty("xp", grave.getStoredXP());
             obj.addProperty("date", grave.getSpawned());
 
+            if (grave.isNpc()) {
+                obj.addProperty("npc-had-items", grave.hadItems());
+                obj.addProperty("npc-name", grave.getPlayerName());
+                var profile = grave.getAppearance();
+                if (profile != null) {
+                    var head = new ItemStack(org.bukkit.Material.PLAYER_HEAD);
+                    head.setData(io.papermc.paper.datacomponent.DataComponentTypes.PROFILE, profile);
+                    obj.addProperty("npc-profile-item", Base64.getEncoder().encodeToString(head.serializeAsBytes()));
+                }
+            }
             array.add(obj);
         }
 
@@ -104,8 +114,30 @@ public class SpawnedGraves {
                 ItemStack[] equipment = obj.has("equipment")
                         ? Serializers.ITEM_ARRAY.deserialize(Base64.getDecoder().decode(obj.get("equipment").getAsString()))
                         : null;
+                String name = obj.has("npc-name") ? obj.get("npc-name").getAsString() : null;
+                io.papermc.paper.datacomponent.item.ResolvableProfile appearance = null;
+                if (obj.has("npc-profile-item")) {
+                    var head = ItemStack.deserializeBytes(Base64.getDecoder().decode(obj.get("npc-profile-item").getAsString()));
+                    appearance = head.getData(io.papermc.paper.datacomponent.DataComponentTypes.PROFILE);
+                } else if (obj.has("npc-profile")) {
+                    var skin = obj.getAsJsonObject("npc-profile");
+                    var profile = io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile();
+                    if (skin.has("uuid")) profile.uuid(UUID.fromString(skin.get("uuid").getAsString()));
+                    if (skin.has("name")) profile.name(skin.get("name").getAsString());
+                    for (var elProp : skin.getAsJsonArray("properties")) {
+                        var prop = elProp.getAsJsonObject();
+                        profile.addProperty(new com.destroystokyo.paper.profile.ProfileProperty(
+                                prop.get("name").getAsString(), prop.get("value").getAsString(),
+                                prop.has("signature") ? prop.get("signature").getAsString() : null));
+                    }
+                    appearance = profile.build();
+                }
+                var npcAppearance = appearance;
+                boolean hadItems = obj.has("npc-had-items") ? obj.get("npc-had-items").getAsBoolean()
+                        : Arrays.stream(items).anyMatch(item -> item != null && !item.isEmpty())
+                                || equipment != null && Arrays.stream(equipment).anyMatch(item -> item != null && !item.isEmpty());
                 Scheduler.get().runAt(location,
-                        () -> addGrave(new Grave(location, owner, Arrays.asList(items), xp, date, equipment)));
+                        () -> addGrave(new Grave(location, owner, Arrays.asList(items), xp, date, equipment, name, npcAppearance, hadItems)));
             }
         } catch (Exception ex) {
             ex.printStackTrace();

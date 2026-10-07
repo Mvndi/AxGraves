@@ -55,6 +55,9 @@ public class Grave {
     private final Location location;
     private final OfflinePlayer player;
     private final String playerName;
+    private final @Nullable ResolvableProfile appearance;
+    private final boolean npc;
+    private volatile boolean hadItems;
     private final Inventory gui;
     private int storedXP;
     private volatile Mannequin entity;
@@ -66,6 +69,20 @@ public class Grave {
     private boolean spawnFailureReported = false;
 
     public Grave(Location loc, @NotNull OfflinePlayer offlinePlayer, @NotNull List<ItemStack> items, int storedXP, long date, @Nullable ItemStack[] equipment) {
+        this(loc, offlinePlayer, items, storedXP, date, equipment, null, null);
+    }
+
+    public Grave(Location loc, @NotNull OfflinePlayer offlinePlayer, @NotNull List<ItemStack> items, int storedXP,
+            long date, @Nullable ItemStack[] equipment, @Nullable String displayName, @Nullable ResolvableProfile appearance) {
+        this(loc, offlinePlayer, items, storedXP, date, equipment, displayName, appearance, !items.isEmpty());
+    }
+
+    public Grave(Location loc, @NotNull OfflinePlayer offlinePlayer, @NotNull List<ItemStack> items, int storedXP,
+            long date, @Nullable ItemStack[] equipment, @Nullable String displayName, @Nullable ResolvableProfile appearance,
+            boolean hadItems) {
+        this.hadItems = hadItems;
+        this.npc = displayName != null;
+        this.appearance = appearance;
         items = new ArrayList<>(items);
         items.removeIf(it -> {
             if (it == null || it.getType().isAir() || it.getAmount() <= 0) return true;
@@ -76,19 +93,20 @@ public class Grave {
 
         this.location = LocationUtils.getCenterOf(loc, true, false);
         this.player = offlinePlayer;
-        this.playerName = offlinePlayer.getName() == null ? LANG.getString("unknown-player", "???") : offlinePlayer.getName();
+        this.playerName = displayName != null ? displayName
+                : offlinePlayer.getName() == null ? LANG.getString("unknown-player", "???") : offlinePlayer.getName();
         this.storedXP = storedXP;
         this.spawned = date;
         this.gui = Bukkit.createInventory(
                 null,
                 InventoryUtils.getRequiredRows(items.size()) * 9,
-                StringUtils.formatToString(LANG.getString("gui-name").replace("%player%", playerName))
+                StringUtils.formatToString(LANG.getString("gui-name").replace("%player%", npc ? net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().escapeTags(playerName) : playerName))
         );
 
         LocationUtils.clampLocation(location);
 
         Player pl = offlinePlayer.getPlayer();
-        if (pl != null) {
+        if (pl != null && !npc) {
             items = InventoryUtils.reorderInventory(pl.getInventory(), items);
             if (LANG.getBoolean("death-message.enabled", false)) {
                 MESSAGEUTILS.sendLang(pl, "death-message.message", Map.of("%world%", LocationUtils.getWorldName(location.getWorld()), "%x%", "" + location.getBlockX(), "%y%", "" + location.getBlockY(), "%z%", "" + location.getBlockZ()));
@@ -123,10 +141,10 @@ public class Grave {
     }
 
     private void spawnMannequin() {
-        Location spawnLoc = location.clone().add(0, 0.5, 0);
+        Location spawnLoc = location.clone().add(0, 0.5 + corpseVerticalOffset(), 0);
         entity = location.getWorld().spawn(spawnLoc, Mannequin.class, mannequin -> {
             mannequin.setPose(Pose.SLEEPING);
-            mannequin.setProfile(ResolvableProfile.resolvableProfile(player.getPlayerProfile()));
+            mannequin.setProfile(appearance != null ? appearance : ResolvableProfile.resolvableProfile(player.getPlayerProfile()));
             mannequin.setInvulnerable(true);
             mannequin.setGravity(false);
             mannequin.setSilent(true);
@@ -153,13 +171,19 @@ public class Grave {
         double dz = Math.sin(yawRad);
         double multiplier = -Math.cos(2 * yawRad);
 
-        Location anchor = location.clone().add(0, 0.4, 0);
+        Location anchor = location.clone().add(0, 0.4 + corpseVerticalOffset(), 0);
         Location near = anchor.clone().add(dx * 0.45 * multiplier, 0, dz * 0.45 * multiplier);
         Location far = anchor.clone().add(dx * 1.35 * multiplier, 0, dz * 1.35 * multiplier);
 
         Interaction a = location.getWorld().spawn(near, Interaction.class, this::configureInteraction);
         Interaction b = location.getWorld().spawn(far, Interaction.class, this::configureInteraction);
         interactions = new Interaction[]{a, b};
+    }
+
+    private double corpseVerticalOffset() {
+        if (!npc) return 0;
+        double offset = CONFIG.getDouble("npc-corpse-vertical-offset", -1.0);
+        return Double.isFinite(offset) ? Math.clamp(offset, -2.0, 2.0) : -1.0;
     }
 
     private void configureInteraction(Interaction i) {
@@ -179,38 +203,53 @@ public class Grave {
         if (removed || !location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)) return;
 
         int items = countItems();
+        if (items > 0) markHadItems();
 
-        int time = CONFIG.getInt("despawn-time-seconds", 180);
-        boolean outOfTime = time * 1_000L <= (System.currentTimeMillis() - spawned);
-        boolean despawn = CONFIG.getBoolean("despawn-when-empty", true);
-        boolean empty = items == 0 && storedXP == 0;
-        if ((time != -1 && outOfTime) || (despawn && empty)) {
+        if (shouldDespawn(items)) {
             remove();
             return;
         }
 
         if (entity == null || !entity.isValid()) spawnMannequin();
-        Interaction[] ixs = interactions;
-        if (ixs == null || ixs.length != 2 || ixs[0] == null || !ixs[0].isValid()
-                || ixs[1] == null || !ixs[1].isValid()) {
-            if (ixs != null) {
-                for (Interaction ix : ixs) {
-                    if (ix != null) ix.remove();
-                }
-            }
-            spawnInteractions();
-        }
+        ensureInteractions();
         reportSpawnFailure();
         updateEquipment(entity);
 
-        if (CONFIG.getBoolean("auto-rotation.enabled", false)) {
-            Mannequin m = entity;
-            if (m != null) {
-                Location loc = m.getLocation();
-                loc.setYaw(loc.getYaw() + CONFIG.getFloat("auto-rotation.speed", 10f));
-                m.setRotation(loc.getYaw(), 0);
-            }
+        rotateCorpse();
+    }
+
+    private void ensureInteractions() {
+        Interaction[] current = interactions;
+        boolean valid = current != null && current.length == 2
+                && current[0] != null && current[0].isValid()
+                && current[1] != null && current[1].isValid();
+        if (valid) return;
+        removeInteractions(current);
+        spawnInteractions();
+    }
+
+    private void removeInteractions(Interaction[] current) {
+        if (current == null) return;
+        for (Interaction interaction : current) {
+            if (interaction != null) interaction.remove();
         }
+    }
+
+    private void rotateCorpse() {
+        if (!CONFIG.getBoolean("auto-rotation.enabled", false)) return;
+        Mannequin mannequin = entity;
+        if (mannequin == null) return;
+        Location current = mannequin.getLocation();
+        current.setYaw(current.getYaw() + CONFIG.getFloat("auto-rotation.speed", 10f));
+        mannequin.setRotation(current.getYaw(), 0);
+    }
+
+    private boolean shouldDespawn(int items) {
+        int time = CONFIG.getInt("despawn-time-seconds", 180);
+        boolean outOfTime = time * 1_000L <= (System.currentTimeMillis() - spawned);
+        boolean despawn = CONFIG.getBoolean("despawn-when-empty", true);
+        boolean empty = items == 0 && storedXP == 0;
+        return (time != -1 && outOfTime) || (despawn && empty && (!npc || hadItems));
     }
 
     private void reportSpawnFailure() {
@@ -432,6 +471,18 @@ public class Grave {
     public Location getLocation() {
         return location;
     }
+
+    public void markHadItems() {
+        hadItems = true;
+    }
+
+    public boolean hadItems() {
+        return hadItems;
+    }
+
+    public boolean isNpc() { return npc; }
+
+    public @Nullable ResolvableProfile getAppearance() { return appearance; }
 
     public OfflinePlayer getPlayer() {
         return player;

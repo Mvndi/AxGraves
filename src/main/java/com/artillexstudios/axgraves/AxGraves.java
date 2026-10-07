@@ -17,6 +17,7 @@ import com.artillexstudios.axgraves.grave.GravePlaceholders;
 import com.artillexstudios.axgraves.grave.SpawnedGraves;
 import com.artillexstudios.axgraves.listeners.DeathListener;
 import com.artillexstudios.axgraves.listeners.EntityInteractListener;
+import com.artillexstudios.axgraves.listeners.GraveInventoryListener;
 import com.artillexstudios.axgraves.listeners.GraveLockListener;
 import com.artillexstudios.axgraves.respawn.RespawnChoiceMenu;
 import com.artillexstudios.axgraves.schedulers.SaveGraves;
@@ -55,22 +56,12 @@ public final class AxGraves extends AxPlugin {
 
         new Metrics(this, 20332);
 
-        CONFIG = new Config(new File(getDataFolder(), "config.yml"), getResource("config.yml"),
-                GeneralSettings.builder().setUseDefaults(false).build(),
-                LoaderSettings.builder().setAutoUpdate(true).build(), DumperSettings.DEFAULT,
-                UpdaterSettings.builder().setVersioning(new BasicVersioning("version")).build());
-        LANG = new Config(new File(getDataFolder(), "messages.yml"), getResource("messages.yml"),
-                GeneralSettings.builder().setUseDefaults(false).build(),
-                LoaderSettings.builder().setAutoUpdate(true).build(), DumperSettings.DEFAULT,
-                UpdaterSettings.builder().setVersioning(new BasicVersioning("version")).build());
+        loadConfigs();
 
         debugMode = CONFIG.getBoolean("debug", false);
         MESSAGEUTILS = new MessageUtils(LANG.getBackingDocument(), "prefix", CONFIG.getBackingDocument());
 
-        new DeathListener();
-        getServer().getPluginManager().registerEvents(new EntityInteractListener(), this);
-        getServer().getPluginManager().registerEvents(new GraveLockListener(this), this);
-        getServer().getPluginManager().registerEvents(new RespawnChoiceMenu(), this);
+        registerListeners();
 
         CommandManager.load();
         GravePlaceholders.register();
@@ -88,6 +79,25 @@ public final class AxGraves extends AxPlugin {
 
         UpdateNotifier.init(CONFIG, LANG);
         if (CONFIG.getBoolean("update-notifier.enabled", true)) new UpdateNotifier();
+    }
+
+    private void loadConfigs() {
+        CONFIG = new Config(new File(getDataFolder(), "config.yml"), getResource("config.yml"),
+                GeneralSettings.builder().setUseDefaults(false).build(),
+                LoaderSettings.builder().setAutoUpdate(true).build(), DumperSettings.DEFAULT,
+                UpdaterSettings.builder().setVersioning(new BasicVersioning("version")).build());
+        LANG = new Config(new File(getDataFolder(), "messages.yml"), getResource("messages.yml"),
+                GeneralSettings.builder().setUseDefaults(false).build(),
+                LoaderSettings.builder().setAutoUpdate(true).build(), DumperSettings.DEFAULT,
+                UpdaterSettings.builder().setVersioning(new BasicVersioning("version")).build());
+    }
+
+    private void registerListeners() {
+        new DeathListener();
+        getServer().getPluginManager().registerEvents(new EntityInteractListener(), this);
+        getServer().getPluginManager().registerEvents(new GraveLockListener(this), this);
+        getServer().getPluginManager().registerEvents(new RespawnChoiceMenu(), this);
+        getServer().getPluginManager().registerEvents(new GraveInventoryListener(), this);
     }
 
     public void disable() {

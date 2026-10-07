@@ -21,7 +21,7 @@ public class GravePlaceholders {
         PlaceholderHandler.register("player", handler -> {
             Grave grave = handler.raw(Grave.class);
             if (grave == null) return empty;
-            return grave.getPlayerName();
+            return grave.isNpc() ? net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().escapeTags(grave.getPlayerName()) : grave.getPlayerName();
         }, false);
 
         PlaceholderHandler.register("xp", handler -> {

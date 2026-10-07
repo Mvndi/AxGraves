@@ -71,6 +71,7 @@ override-keep-level: false
 # how high should death chest holograms spawn?
 # only applies to new graves
 hologram-height: 0.75
+npc-corpse-vertical-offset: -1.0
 
 # how high should the player head be?
 # in some versions on some clients may see the heads glitched in the ground
