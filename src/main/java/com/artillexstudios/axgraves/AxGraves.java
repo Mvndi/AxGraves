@@ -16,6 +16,7 @@ import com.artillexstudios.axgraves.grave.Grave;
 import com.artillexstudios.axgraves.grave.GravePlaceholders;
 import com.artillexstudios.axgraves.grave.SpawnedGraves;
 import com.artillexstudios.axgraves.listeners.DeathListener;
+import com.artillexstudios.axgraves.listeners.LlmNpcDeathListener;
 import com.artillexstudios.axgraves.listeners.EntityInteractListener;
 import com.artillexstudios.axgraves.listeners.GraveInventoryListener;
 import com.artillexstudios.axgraves.listeners.GraveLockListener;
@@ -31,6 +32,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 public final class AxGraves extends AxPlugin {
+    private static final String LLM_NPCS = "LLMNPCs";
     private static AxPlugin instance;
     public static Config CONFIG;
     public static Config LANG;
@@ -93,6 +95,8 @@ public final class AxGraves extends AxPlugin {
     }
 
     private void registerListeners() {
+        if (getServer().getPluginManager().isPluginEnabled(LLM_NPCS))
+            getServer().getPluginManager().registerEvents(new LlmNpcDeathListener(), this);
         new DeathListener();
         getServer().getPluginManager().registerEvents(new EntityInteractListener(), this);
         getServer().getPluginManager().registerEvents(new GraveLockListener(this), this);
