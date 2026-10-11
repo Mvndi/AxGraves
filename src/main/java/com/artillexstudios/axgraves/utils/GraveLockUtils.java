@@ -166,7 +166,7 @@ public final class GraveLockUtils {
             } else {
                 sound = tickSoundName;
             }
-            Bukkit.getRegionScheduler().runDelayed(AxGraves.getInstance(), player.getLocation(), (ignored) -> {
+            player.getScheduler().runDelayed(AxGraves.getInstance(), (ignored) -> {
                 long remainingMillis = getRemainingLockMillis(player);
                 long remainingSeconds = Math.max(1L, (remainingMillis + 999L) / 1000L);
                 String subtitle = StringUtils.formatToString(LANG
@@ -186,8 +186,8 @@ public final class GraveLockUtils {
 
                     player.sendMessage(Component.text(chatMessage));
                 }
-                player.getWorld().playSound(player, sound, 1.0f, 1.0f);
-            }, delayTicks);
+                player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
+            }, null, delayTicks);
         }
     }
 

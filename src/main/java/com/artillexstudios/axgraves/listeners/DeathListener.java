@@ -116,6 +116,7 @@ public class DeathListener implements Listener {
                 LogUtils.debug("[{}] death recorded at: {}", player.getName(), new java.util.Date(deathTime));
 
             event.deathMessage(null);
+            event.setShouldPlayDeathSound(false);
             return;
         }
 
