@@ -15,6 +15,7 @@ import java.util.*;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -24,6 +25,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.EventExecutor;
 
 public class DeathListener implements Listener {
+    private static final String GRAVE_DEATH_SOUND_PATH = "grave-lock-sounds.death";
+    private static final String DEFAULT_GRAVE_DEATH_SOUND = "mvndicraft:combat.kill";
     private static List<String> disabledWorlds;
     private static List<String> blacklistedDeathCauses;
     private static final Set<UUID> gravedPlayers = new HashSet<>();
@@ -133,6 +136,7 @@ public class DeathListener implements Listener {
                 Bukkit.getServer().sendMessage(event.deathMessage());
             }
             event.setCancelled(true);
+            playGraveDeathSound(player);
 
             // Hide and protect player instead of spectator mode
             GraveLockUtils.applyGraveLockState(player);
@@ -284,6 +288,11 @@ public class DeathListener implements Listener {
         final GraveSpawnEvent graveSpawnEvent = new GraveSpawnEvent(player, grave);
         Bukkit.getPluginManager().callEvent(graveSpawnEvent);
 
+    }
+
+    private void playGraveDeathSound(Player player) {
+        player.getWorld().playSound(player.getLocation(), CONFIG.getString(GRAVE_DEATH_SOUND_PATH, DEFAULT_GRAVE_DEATH_SOUND),
+                SoundCategory.PLAYERS, 1.0F, 1.0F);
     }
 
     private boolean isRealDeath(Player player) {

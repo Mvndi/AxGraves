@@ -24,6 +24,8 @@ import org.bukkit.persistence.PersistentDataType;
 public final class GraveLockUtils {
     private static final String SAVED_WALK_SPEED = "grave-lock-walk-speed";
     private static final String SAVED_FLY_SPEED = "grave-lock-fly-speed";
+    private static final String SAVED_SILENT_STATE = "grave-lock-silent-state";
+    private static final NamespacedKey SILENT_STATE_KEY = new NamespacedKey(AxGraves.getInstance(), SAVED_SILENT_STATE);
     private static final NamespacedKey WALK_SPEED_KEY = new NamespacedKey(AxGraves.getInstance(), SAVED_WALK_SPEED);
     private static final NamespacedKey FLY_SPEED_KEY = new NamespacedKey(AxGraves.getInstance(), SAVED_FLY_SPEED);
     private static NamespacedKey gravedKey = new NamespacedKey(AxGraves.getInstance(), "graved");
@@ -223,6 +225,7 @@ public final class GraveLockUtils {
     }
 
     public static void onPlayerJoin(Player player) {
+        restorePreviousSilentState(player);
         if (getRemainingLockMillis(player) <= 0) {
             removeGraveLockState(player);
         } else if (isGravedLogoutPlayer(player)) {
@@ -233,6 +236,16 @@ public final class GraveLockUtils {
 
             com.artillexstudios.axgraves.respawn.RespawnChoiceMenu.giveCompassLater(player, 20L);
         }
+    }
+
+    private static void restorePreviousSilentState(Player player) {
+        PersistentDataContainer data = player.getPersistentDataContainer();
+        if (!data.has(SILENT_STATE_KEY, PersistentDataType.BOOLEAN)) {
+            return;
+        }
+        // Clean up the saved state from the previous grave sound suppression implementation.
+        player.setSilent(data.getOrDefault(SILENT_STATE_KEY, PersistentDataType.BOOLEAN, false));
+        data.remove(SILENT_STATE_KEY);
     }
 
     public static void onPlayerQuit(Player player) {

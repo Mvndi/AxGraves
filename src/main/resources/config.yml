@@ -43,6 +43,7 @@ siege-respawn-penalty:
   reset-after-seconds-without-death: 600
 
 grave-lock-sounds:
+  death: mvndicraft:combat.kill
   last: block.lever.click # when the player respawn
   interval: block.lever.click # every 5s
   tick: block.lever.click # every other seconds
