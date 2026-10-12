@@ -145,7 +145,7 @@ public class RespawnChoiceMenu implements Listener {
     private static ItemStack buildItem(Material material, String name, NamedTextColor color, List<String> lore) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text(name, color).decoration(TextDecoration.ITALIC, false));
+        meta.itemName(Component.text(name, color).decoration(TextDecoration.ITALIC, false));
         meta.lore(lore.stream()
                 .map(line -> Component.text(line, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false))
                 .toList());
