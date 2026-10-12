@@ -6,6 +6,7 @@ import com.destroystokyo.paper.event.player.PlayerPickupExperienceEvent;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
 
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -30,8 +31,10 @@ import static com.artillexstudios.axgraves.AxGraves.MESSAGEUTILS;
 public class GraveLockListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        // Si l'attaquant est un joueur et qu'il est en GraveLock, on annule l'attaque
         Entity damager = event.getDamager();
+        if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Player shooter) {
+            damager = shooter;
+        }
         if (damager instanceof Player player) {
             if (GraveLockUtils.isLocked(player)) {
                 event.setCancelled(true);
@@ -94,7 +97,7 @@ public class GraveLockListener implements Listener {
         sendDeniedActionMessage(player, "command");
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         if (!GraveLockUtils.isLocked(player))

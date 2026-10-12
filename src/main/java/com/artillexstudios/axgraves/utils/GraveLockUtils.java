@@ -18,9 +18,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 public final class GraveLockUtils {
+    private static final String SAVED_WALK_SPEED = "grave-lock-walk-speed";
+    private static final String SAVED_FLY_SPEED = "grave-lock-fly-speed";
+    private static final NamespacedKey WALK_SPEED_KEY = new NamespacedKey(AxGraves.getInstance(), SAVED_WALK_SPEED);
+    private static final NamespacedKey FLY_SPEED_KEY = new NamespacedKey(AxGraves.getInstance(), SAVED_FLY_SPEED);
     private static NamespacedKey gravedKey = new NamespacedKey(AxGraves.getInstance(), "graved");
     private static NamespacedKey logoutKey = new NamespacedKey(AxGraves.getInstance(), "logged-out");
     private static NamespacedKey lockDurationKey = new NamespacedKey(AxGraves.getInstance(), "lock-duration");
@@ -39,14 +44,15 @@ public final class GraveLockUtils {
                 });
             }
         }
-        Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), player.getLocation(), () -> {
+        player.getScheduler().run(AxGraves.getInstance(), task -> {
+            freezeMovementSpeeds(player);
             player.setInvulnerable(true);
             player.setInvisible(true);
             player.setAllowFlight(true);
             player.setFlying(true);
             player.setCanPickupItems(false);
             vanishedPlayers.add(player.getUniqueId());
-        });
+        }, null);
     }
 
     public static void removeGraveLockState(Player player) {
@@ -60,7 +66,8 @@ public final class GraveLockUtils {
                 });
             }
         }
-        Bukkit.getRegionScheduler().execute(AxGraves.getInstance(), player.getLocation(), () -> {
+        player.getScheduler().run(AxGraves.getInstance(), task -> {
+            restoreMovementSpeeds(player);
             player.setInvulnerable(false);
             player.setInvisible(false);
             if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
@@ -70,7 +77,31 @@ public final class GraveLockUtils {
             player.setCanPickupItems(true);
             vanishedPlayers.remove(player.getUniqueId());
             com.artillexstudios.axgraves.respawn.RespawnChoiceMenu.removeCompass(player);
-        });
+        }, null);
+    }
+
+    private static void freezeMovementSpeeds(Player player) {
+        PersistentDataContainer data = player.getPersistentDataContainer();
+        if (!data.has(WALK_SPEED_KEY, PersistentDataType.FLOAT)) {
+            data.set(WALK_SPEED_KEY, PersistentDataType.FLOAT, player.getWalkSpeed());
+        }
+        if (!data.has(FLY_SPEED_KEY, PersistentDataType.FLOAT)) {
+            data.set(FLY_SPEED_KEY, PersistentDataType.FLOAT, player.getFlySpeed());
+        }
+        player.setWalkSpeed(0.0F);
+        player.setFlySpeed(0.0F);
+    }
+
+    private static void restoreMovementSpeeds(Player player) {
+        PersistentDataContainer data = player.getPersistentDataContainer();
+        if (data.has(WALK_SPEED_KEY, PersistentDataType.FLOAT)) {
+            player.setWalkSpeed(data.getOrDefault(WALK_SPEED_KEY, PersistentDataType.FLOAT, player.getWalkSpeed()));
+            data.remove(WALK_SPEED_KEY);
+        }
+        if (data.has(FLY_SPEED_KEY, PersistentDataType.FLOAT)) {
+            player.setFlySpeed(data.getOrDefault(FLY_SPEED_KEY, PersistentDataType.FLOAT, player.getFlySpeed()));
+            data.remove(FLY_SPEED_KEY);
+        }
     }
 
     private static final long DEFAULT_MOVE_LOCK_SECONDS = 30L;

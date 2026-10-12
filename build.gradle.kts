@@ -55,6 +55,7 @@ repositories {
 }
 
 dependencies {
+    compileOnly("net.mvndicraft:mvndiequipment:2.1.4-SNAPSHOT") { isTransitive = false }
     compileOnly("net.mvndicraft:llmnpcs:0.1.0") { isTransitive = false }
     implementation("com.artillexstudios.axapi:axapi:1.4.840:all")
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")

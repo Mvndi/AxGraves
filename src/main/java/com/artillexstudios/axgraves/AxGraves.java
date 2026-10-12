@@ -20,6 +20,7 @@ import com.artillexstudios.axgraves.listeners.LlmNpcDeathListener;
 import com.artillexstudios.axgraves.listeners.EntityInteractListener;
 import com.artillexstudios.axgraves.listeners.GraveInventoryListener;
 import com.artillexstudios.axgraves.listeners.GraveLockListener;
+import com.artillexstudios.axgraves.listeners.ThrowingWeaponLockListener;
 import com.artillexstudios.axgraves.respawn.RespawnChoiceMenu;
 import com.artillexstudios.axgraves.schedulers.SaveGraves;
 import com.artillexstudios.axgraves.schedulers.TickGraves;
@@ -33,6 +34,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 public final class AxGraves extends AxPlugin {
     private static final String LLM_NPCS = "LLMNPCs";
+    private static final String MVNDI_EQUIPMENT = "MvndiEquipment";
     private static AxPlugin instance;
     public static Config CONFIG;
     public static Config LANG;
@@ -95,6 +97,8 @@ public final class AxGraves extends AxPlugin {
     }
 
     private void registerListeners() {
+        if (getServer().getPluginManager().isPluginEnabled(MVNDI_EQUIPMENT))
+            getServer().getPluginManager().registerEvents(new ThrowingWeaponLockListener(), this);
         if (getServer().getPluginManager().isPluginEnabled(LLM_NPCS))
             getServer().getPluginManager().registerEvents(new LlmNpcDeathListener(), this);
         new DeathListener();
