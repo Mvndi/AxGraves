@@ -3,6 +3,10 @@ package com.artillexstudios.axgraves.utils;
 import com.artillexstudios.axapi.libs.boostedyaml.block.implementation.Section;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.util.BoundingBox;
+
+import java.util.OptionalDouble;
 import org.jetbrains.annotations.NotNull;
 
 import static com.artillexstudios.axgraves.AxGraves.CONFIG;
@@ -15,6 +19,17 @@ public class LocationUtils {
         if (keepYaw) loc.setYaw(location.getYaw());
         if (keepPitch) loc.setPitch(location.getPitch());
         return loc;
+    }
+
+    public static OptionalDouble findSurfaceY(Block block) {
+        double surface = Double.NEGATIVE_INFINITY;
+        for (BoundingBox box : block.getCollisionShape().getBoundingBoxes()) {
+            if (box.getMinX() <= 0.5 && box.getMaxX() >= 0.5
+                    && box.getMinZ() <= 0.5 && box.getMaxZ() >= 0.5) {
+                surface = Math.max(surface, box.getMaxY());
+            }
+        }
+        return Double.isFinite(surface) ? OptionalDouble.of(block.getY() + surface) : OptionalDouble.empty();
     }
 
     public static int getNearestDirection(float x) {

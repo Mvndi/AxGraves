@@ -9,6 +9,7 @@ import com.artillexstudios.axgraves.grave.Grave;
 import com.artillexstudios.axgraves.grave.SpawnedGraves;
 import com.artillexstudios.axgraves.utils.ExperienceUtils;
 import com.artillexstudios.axgraves.utils.GraveLockUtils;
+import com.artillexstudios.axgraves.utils.LocationUtils;
 import com.artillexstudios.axgraves.utils.TownyUtils;
 
 import java.util.*;
@@ -16,6 +17,7 @@ import java.util.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.SoundCategory;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -197,7 +199,7 @@ public class DeathListener implements Listener {
             });
         }
 
-        location.setY(location.clone().getY() - 1); // place the armor stand head in the block
+        location.setY(location.getY() - 0.5); // The mannequin spawns half a block above the saved anchor.
 
         if (debug)
             LogUtils.debug("[{}] location moved to {}", player.getName(), location.toString());
@@ -300,41 +302,30 @@ public class DeathListener implements Listener {
     }
 
     private double findSafeY(Location location) {
-        if (location.getWorld() == null) {
-            return location.getY();
+        World world = location.getWorld();
+        if (world == null) return location.getY();
+
+        int blockY = Math.clamp(location.getBlockY(), world.getMinHeight(), world.getMaxHeight() - 1);
+        OptionalDouble surface = LocationUtils.findSurfaceY(world.getBlockAt(location.getBlockX(), blockY, location.getBlockZ()));
+        if (surface.isPresent() && surface.getAsDouble() > location.getY()) {
+            return findSurfaceAbove(location, blockY);
         }
-
-        double y = location.getY();
-        int maxAttempts = 256;
-        List<String> safeBlocks = CONFIG.getStringList("safe-blocks");
-        int blockX = (int) Math.floor(location.getX());
-        int blockZ = (int) Math.floor(location.getZ());
-        int minHeight = location.getWorld().getMinHeight();
-        int maxHeight = location.getWorld().getMaxHeight() - 1;
-
-        boolean startInBlock = !location.getWorld().getBlockAt(blockX, (int) Math.floor(y), blockZ).isPassable();
-
-        if (startInBlock) {
-            while (y < maxHeight && maxAttempts-- > 0) {
-                String blockType = location.getWorld().getBlockAt(blockX, (int) Math.floor(y), blockZ).getType().name();
-                if (safeBlocks.contains(blockType)) {
-                    return Math.floor(y);
-                }
-                y++;
-            }
-        } else {
-            while (y > minHeight && maxAttempts-- > 0) {
-                String blockType = location.getWorld().getBlockAt(blockX, (int) Math.floor(y), blockZ).getType().name();
-                if (!safeBlocks.contains(blockType)) {
-                    return Math.floor(y + 1);
-                }
-                y--;
-            }
-
-            return Math.floor(Math.max(minHeight, y));
+        for (int y = blockY; y >= world.getMinHeight(); y--) {
+            surface = LocationUtils.findSurfaceY(world.getBlockAt(location.getBlockX(), y, location.getBlockZ()));
+            if (surface.isPresent()) return surface.getAsDouble();
         }
+        return world.getMinHeight();
+    }
 
-        return Math.floor(location.getY());
+    private double findSurfaceAbove(Location location, int blockY) {
+        World world = location.getWorld();
+        double surfaceY = location.getY();
+        for (int y = blockY; y < world.getMaxHeight(); y++) {
+            OptionalDouble surface = LocationUtils.findSurfaceY(world.getBlockAt(location.getBlockX(), y, location.getBlockZ()));
+            if (surface.isEmpty()) return surfaceY;
+            surfaceY = surface.getAsDouble();
+        }
+        return surfaceY;
     }
 
     private boolean isSiegeActive(Player player) {

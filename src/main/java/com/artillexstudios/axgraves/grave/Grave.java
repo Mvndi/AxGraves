@@ -92,6 +92,7 @@ public class Grave {
         items.replaceAll(ItemStack::clone); // clone all items
 
         this.location = LocationUtils.getCenterOf(loc, true, false);
+        this.location.setY(loc.getY());
         this.player = offlinePlayer;
         this.playerName = displayName != null ? displayName
                 : offlinePlayer.getName() == null ? LANG.getString("unknown-player", "???") : offlinePlayer.getName();
