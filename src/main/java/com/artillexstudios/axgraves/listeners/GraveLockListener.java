@@ -2,6 +2,7 @@ package com.artillexstudios.axgraves.listeners;
 
 import com.artillexstudios.axgraves.utils.GraveLockUtils;
 import com.destroystokyo.paper.event.player.PlayerPickupExperienceEvent;
+import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent;
 
 import io.papermc.paper.event.player.PlayerPickItemEvent;
 
@@ -194,6 +195,11 @@ public class GraveLockListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         lastActionMessage.remove(event.getPlayer().getUniqueId());
         GraveLockUtils.onPlayerJoin(event.getPlayer());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerRespawn(PlayerPostRespawnEvent event) {
+        GraveLockUtils.onPlayerRespawn(event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)

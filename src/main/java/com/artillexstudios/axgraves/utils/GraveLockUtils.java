@@ -2,7 +2,6 @@ package com.artillexstudios.axgraves.utils;
 
 import static com.artillexstudios.axgraves.AxGraves.EXECUTOR;
 import static com.artillexstudios.axgraves.AxGraves.LANG;
-import com.artillexstudios.axapi.scheduler.Scheduler;
 import com.artillexstudios.axapi.utils.StringUtils;
 import com.artillexstudios.axapi.utils.logging.LogUtils;
 import com.artillexstudios.axgraves.AxGraves;
@@ -80,6 +79,12 @@ public final class GraveLockUtils {
             vanishedPlayers.remove(player.getUniqueId());
             com.artillexstudios.axgraves.respawn.RespawnChoiceMenu.removeCompass(player);
         }, null);
+    }
+
+    public static void onPlayerRespawn(Player player) {
+        if (vanishedPlayers.contains(player.getUniqueId()) && !isGravedPlayer(player)) {
+            removeGraveLockState(player);
+        }
     }
 
     private static void freezeMovementSpeeds(Player player) {
@@ -348,20 +353,19 @@ public final class GraveLockUtils {
             return;
         }
 
-        Scheduler.get().runAt(player.getLocation(), task -> {
-            if (!player.isOnline() || player.isDead()) {
+        player.getScheduler().run(AxGraves.getInstance(), task -> {
+            if (!player.isOnline() || player.isDead() || !isGravedPlayer(player)) {
                 return;
             }
-            removeGraveLockState(player);
-
-            if (!isGravedLogoutPlayer(player)) {
-                player.setHealth(0.0D);
-            } else {
-                unsetGravedPlayer(player);
-                unsetGravedLogoutPlayer(player);
+            if (isGravedLogoutPlayer(player)) {
+                removeGraveLockState(player);
+                return;
             }
-        });
-        removeGraveLockState(player);
+
+            // Keep the player hidden until respawn so the real death animation stays invisible.
+            unsetGravedPlayer(player);
+            player.setHealth(0.0D);
+        }, null);
     }
 
 
