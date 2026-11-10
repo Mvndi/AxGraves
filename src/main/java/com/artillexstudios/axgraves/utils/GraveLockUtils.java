@@ -82,9 +82,16 @@ public final class GraveLockUtils {
     }
 
     public static void onPlayerRespawn(Player player) {
-        if (vanishedPlayers.contains(player.getUniqueId()) && !isGravedPlayer(player)) {
-            removeGraveLockState(player);
+        if (!vanishedPlayers.contains(player.getUniqueId())) {
+            return;
         }
+
+        // Molia fires the respawn event before placing the player in the destination region.
+        player.getScheduler().run(AxGraves.getInstance(), task -> {
+            if (vanishedPlayers.contains(player.getUniqueId()) && !isGravedPlayer(player)) {
+                removeGraveLockState(player);
+            }
+        }, null);
     }
 
     private static void freezeMovementSpeeds(Player player) {
