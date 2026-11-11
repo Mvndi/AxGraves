@@ -5,6 +5,8 @@ import static com.artillexstudios.axgraves.AxGraves.LANG;
 import com.artillexstudios.axapi.utils.StringUtils;
 import com.artillexstudios.axapi.utils.logging.LogUtils;
 import com.artillexstudios.axgraves.AxGraves;
+import com.artillexstudios.axgraves.grave.Grave;
+import com.artillexstudios.axgraves.grave.SpawnedGraves;
 import java.time.Duration;
 import java.util.Set;
 import java.util.UUID;
@@ -244,10 +246,20 @@ public final class GraveLockUtils {
             unsetGravedLogoutPlayer(player);
 
             applyGraveLockState(player);
+            player.getScheduler().runDelayed(AxGraves.getInstance(), task -> teleportToGrave(player), null, 20L);
             showFalseDeathTitle(player);
 
             com.artillexstudios.axgraves.respawn.RespawnChoiceMenu.giveCompassLater(player, 20L);
         }
+    }
+
+    private static void teleportToGrave(Player player) {
+        SpawnedGraves.getGraves().stream()
+                .filter(grave -> grave.getPlayer().getUniqueId().equals(player.getUniqueId()))
+                .findFirst()
+                .map(Grave::getLocation)
+                .map(location -> location.clone().add(0, 0.5, 0))
+                .ifPresent(player::teleportAsync);
     }
 
     private static void restorePreviousSilentState(Player player) {
